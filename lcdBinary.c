@@ -49,7 +49,22 @@
 
 void printGPIO(uint32_t *gpio) {
   for (int i = 0; i < 15; i++) {
-    printf("%d:%d\n", i, *(gpio+i));
+    printf("%d:", i);
+    int bee = *(gpio+i);
+    for (int bitindex = 0; bitindex < 32; bitindex++) {
+      int bit = (bee << bitindex) & 0b10000000000000000000000000000000;
+
+      //i.e. is true.
+      if (bit != 0x0) {
+        printf("1");
+      }
+      //i.e. is false.
+      else {
+        printf("0");
+      }
+    }
+
+    printf("\n");
   }
 }
 
@@ -59,9 +74,25 @@ int failure (int fatal, const char *message, ...);
 // Functions to implement here (or directly in master-mind.c)
 
 /* this version needs gpio as argument, because it is in a separate file */
-void digitalWrite (uint32_t *gpio, int pin, int value) {
+int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
   /* ***  COMPLETE the code here, using inline Assembler  ***  */
-    
+    // asm volatile (
+    //     "\t     mov      r1,    %[asmintArr]    \n" // get address of array
+    //     "\t     mov      r2,    $0              \n" // initialize R1 to 1
+	  //     "\t     mov      r3,    $50             \n" // initialize R3 to 20
+    //     "\t     bl       lmao                   \n"
+    //     "lmao:  str      r2,    [r1,$0]         \n"
+    //     "\t     add      r2,    r2,     $2      \n" // Add 1 to R2
+    //     "\t     add      r1,    r1,     $4      \n" // Add 1 to R1
+    //     "\t     cmp      r2,    r3;             \n" // compare R2 and R3
+    //     "\t     bne      lmao;                  \n" // loop while not equal (R2 and R3)
+    //   :  [result] "=r" (outval)
+    //   :  [asmintArr] "r" (intArr)
+    //   :  "r0", "r1", "r2", "r3", "r4", "r5", "cc"
+    // );
+
+    //lsl
+    //lsr
 }
 
 // adapted from setPinMode

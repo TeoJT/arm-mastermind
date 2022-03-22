@@ -61,7 +61,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
-#include "lcdBinary.c"
+//#include "lcdBinary.c"
+#include "test-hardware.c"
 
 /* --------------------------------------------------------------------------- */
 /* Config settings */
@@ -226,7 +227,7 @@ void waitForButton(uint32_t *gpio, int button);
 /* These are just prototypes; you need to complete the code for each function */
 
 /* send a @value@ (LOW or HIGH) on pin number @pin@; @gpio@ is the mmaped GPIO base address */
-void digitalWrite(uint32_t *gpio, int pin, int value);
+// void digitalWrite(uint32_t *gpio, int pin, int value);
 
 /* set the @mode@ of a GPIO @pin@ to INPUT or OUTPUT; @gpio@ is the mmaped GPIO base address */
 void pinMode(uint32_t *gpio, int pin, int mode);
@@ -628,6 +629,11 @@ void lcdPuts(struct lcdDataStruct *lcd, const char *string)
     lcdPutchar(lcd, *string++);
 }
 
+
+int buttonDown() {
+  return ((*(gpio + 13 /* GPLEV0 */) & (1 << (BUTTON & 31))) != 0);
+}
+
 /* ======================================================= */
 /* SECTION: aux functions for game logic                   */
 /* ------------------------------------------------------- */
@@ -652,7 +658,7 @@ void blinkN(uint32_t *gpio, int led, int c)
 
 int main(int argc, char *argv[])
 { // this is just a suggestion of some variable that you may want to use
-printf("Entering Main Program\n");
+  printf("Entering Main Program\n");
   struct lcdDataStruct *lcd;
   int bits, rows, cols;
   unsigned char func;
@@ -823,50 +829,38 @@ printf("Entering Main Program\n");
   // -----------------------------------------------------------------------------
   // setting LED 1 the mode
   fprintf(stderr, "setting pin %d to %d ...\n", pinLED, OUTPUT);
-  fSel =  1;    // GPIO 47 lives in register 4 (GPFSEL)
-  shift =  9;  // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
-  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift) ;  // Sets bits to one = output
+  fSel = 1;                                                         // GPIO 47 lives in register 4 (GPFSEL)
+  shift = 9;                                                        // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
+  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift); // Sets bits to one = output
 
   // setting LED 2 the mode
   fprintf(stderr, "setting pin %d to %d ...\n", pin2LED2, OUTPUT);
-  fSel =  0;    // GPIO 47 lives in register 4 (GPFSEL)
-  shift =  15;  // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
-  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift) ;  // Sets bits to one = output
-
+  fSel = 0;                                                         // GPIO 47 lives in register 4 (GPFSEL)
+  shift = 15;                                                       // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
+  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift); // Sets bits to one = output
 
   // setting BUTTON the mode
-  fSel =  1;   // 2 // GPIO 24 lives in register 2 (GPFSEL2)
-  shift =  27; // 12 // GPIO 24 sits in slot 4 of register 3, thus shift by 4*3 (3 bits per pin)
+  fSel = 1;   // 2 // GPIO 24 lives in register 2 (GPFSEL2)
+  shift = 27; // 12 // GPIO 24 sits in slot 4 of register 3, thus shift by 4*3 (3 bits per pin)
   // C version of mode input for button
   *(gpio + fSel) = *(gpio + fSel) & ~(7 << shift); // Sets bits to one = output
 
-
-
-
-
-
-  
-int theValue;
-#define DELAY 700
-unsigned int howLong = DELAY;
+  int theValue;
+  unsigned int howLong = DELAY;
 
   *(gpio + 7) = 0b00000000000000000010000000000000;
 
+  {
+    struct timespec sleeper, dummy;
 
-{
-      struct timespec sleeper, dummy ;
+    // fprintf(stderr, "delaying by %d ms ...\n", howLong);
+    sleeper.tv_sec = (time_t)(howLong / 1000);
+    sleeper.tv_nsec = (long)(howLong % 1000) * 1000000;
 
-      // fprintf(stderr, "delaying by %d ms ...\n", howLong);
-      sleeper.tv_sec  = (time_t)(howLong / 1000) ;
-      sleeper.tv_nsec = (long)(howLong % 1000) * 1000000 ;
+    nanosleep(&sleeper, &dummy);
+  }
 
-      nanosleep (&sleeper, &dummy) ;
-    }
-
-
-*(gpio + 10) = 0b00000000000000000010000000000000;
-
-
+  *(gpio + 10) = 0b00000000000000000010000000000000;
 
   // -----------------------------------------------------------------------------
 
@@ -974,14 +968,18 @@ unsigned int howLong = DELAY;
   // END lcdInit ------
   // -----------------------------------------------------------------------------
   // Start of game
-  fprintf(stderr, "Printing welcome message on the LCD display ...\n");
+  printf("testferyhgfesdhubfseduiyghbfeswUYIHESFWUIYHSFE\n");
+  printf("Printing welcome message on the LCD display ...\n");
   /* ***  COMPLETE the code here  ***  */
 
+  printf("This is before the thning\n");
   /* initialise the secret sequence */
   if (!opt_s)
     initSeq();
   if (debug)
     showSeq(theSeq);
+
+  printf("It got past the thing\n");
 
   // optionally one of these 2 calls:
   // waitForEnter () ;
@@ -989,37 +987,51 @@ unsigned int howLong = DELAY;
 
   // -----------------------------------------------------------------------------
   // +++++ main loop
+  testDigital(gpio);
+  printf("This is before the while loop\n");
 
+  //TODO make typedef boolean instead of int.
+  int isPressed = 0;
+
+  int count = 0;
   while (!found)
   {
 
     attempts++;
 
+    theValue = HIGH;
+
+    if ((*(gpio + 13 /* GPLEV0 */) & (1 << (BUTTON & 31))) != 0)
+    {
+       theValue = LOW;
+     }
+     else
+     {
+       theValue = HIGH;
+     }
+    
+    
+    if (buttonDown() && !isPressed)
+    {
+      count++;
+      printf("Press! %d\n", count);
+      usleep(1000);
+
+      isPressed = 1;
+      theValue = HIGH;
+    }
+
+    if (!buttonDown() && isPressed) {
+      isPressed = 0;
+    }
 
 
-        theValue = HIGH ;
 
-        if ((*(gpio + 13 /* GPLEV0 */) & (1 << (BUTTON & 31))) != 0){
-          theValue = LOW ;
-          printf("The value was low");
-        }
-        else{
-        printf("The value was high");
-          theValue = HIGH ;
-      }
+    // printf("Please enter the first number in your guess\n");
 
+    // printf("Please enter the second number in your guess\n");
 
-
-    //printf("Please enter the first number in your guess\n");
-
-
-
-
-
-    //printf("Please enter the second number in your guess\n");
-
-
-    //printf("Please enter the third number in your guess\n");
+    // printf("Please enter the third number in your guess\n");
 
     /* ******************************************************* */
     /* ***  COMPLETE the code here  ***                        */
