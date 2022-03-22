@@ -61,6 +61,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#include "lcdBinary.c"
 
 /* --------------------------------------------------------------------------- */
 /* Config settings */
