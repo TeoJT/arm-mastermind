@@ -63,8 +63,6 @@
 #include <sys/ioctl.h>
 #include "lcdBinary.c"
 
-printf("test")
-
 /* --------------------------------------------------------------------------- */
 /* Config settings */
 /* you can use CPP flags to e.g. print extra debugging messages */
