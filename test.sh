@@ -4,8 +4,8 @@
 # function to check output from running $cmd against expected output
 check () {
     echo "Cmd: $cmd"
-    echo "Output: \n$out"
-    echo "Expected: \n$exp"
+    echo "Output: $out"
+    echo "Expected: $exp"
     if [ "$out" = "$exp" ]
     then echo ".. OK"
 	 ok=$(( $ok + 1))

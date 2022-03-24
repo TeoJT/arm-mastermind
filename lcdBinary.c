@@ -44,30 +44,13 @@
 #include <sys/types.h>
 #include <time.h>
 
+//Declair a volatile structure, used to store our arguments for
+//going into our assembly program, which will be stored into
+//the registers. Therefore we only need to pass the address
+//of this structure.
+
+
 // -----------------------------------------------------------------------------
-// prototypes
-
-void printGPIO(uint32_t *gpio) {
-  for (int i = 0; i < 15; i++) {
-    printf("%d:", i);
-    int bee = *(gpio+i);
-    for (int bitindex = 0; bitindex < 32; bitindex++) {
-      int bit = (bee << bitindex) & 0b10000000000000000000000000000000;
-
-      //i.e. is true.
-      if (bit != 0x0) {
-        printf("1");
-      }
-      //i.e. is false.
-      else {
-        printf("0");
-      }
-    }
-
-    printf("\n");
-  }
-}
-
 int failure (int fatal, const char *message, ...);
 
 // -----------------------------------------------------------------------------
@@ -76,38 +59,213 @@ int failure (int fatal, const char *message, ...);
 /* this version needs gpio as argument, because it is in a separate file */
 int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
   /* ***  COMPLETE the code here, using inline Assembler  ***  */
-    // asm volatile (
-    //     "\t     mov      r1,    %[asmintArr]    \n" // get address of array
-    //     "\t     mov      r2,    $0              \n" // initialize R1 to 1
-	  //     "\t     mov      r3,    $50             \n" // initialize R3 to 20
-    //     "\t     bl       lmao                   \n"
-    //     "lmao:  str      r2,    [r1,$0]         \n"
-    //     "\t     add      r2,    r2,     $2      \n" // Add 1 to R2
-    //     "\t     add      r1,    r1,     $4      \n" // Add 1 to R1
-    //     "\t     cmp      r2,    r3;             \n" // compare R2 and R3
-    //     "\t     bne      lmao;                  \n" // loop while not equal (R2 and R3)
-    //   :  [result] "=r" (outval)
-    //   :  [asmintArr] "r" (intArr)
-    //   :  "r0", "r1", "r2", "r3", "r4", "r5", "cc"
-    // );
 
-    //lsl
-    //lsr
+    volatile struct AsmArgs {
+      uint32_t pin;
+      uint32_t gpio;
+      uint32_t value;
+    } asmArgs;
+
+    asmArgs.gpio = gpio;
+    asmArgs.pin = pin;
+    asmArgs.value = value;
+
+    int outval = 0;
+    asm volatile (
+        
+        //r0-  pin to set
+        //r1-  gpio registers location
+        //r2-  temp bit that holds the on value of pin in register.
+        //r3-  existing register from data.
+        //r4-  value register specifying HIGH or LOW.
+        //r5-  the address of the parameters
+        
+        
+        
+        //Set the parameters
+      "\t          mov r5, %[argsPointer] \n"   //Args memory location
+        
+      "\t          ldr r0, [r5, #0] \n"    //store pin number into register
+      "\t          add r5, #4 \n"
+      "\t          ldr r1, [r5, #0] \n"     //store gpio pointer into register
+      "\t          add r5, #4 \n"
+      "\t          ldr r4, [r5, #0] \n"    //store value into register
+        
+        //Prepare the bit.
+      "\t          mov r2, #1 \n"
+      "\t          lsl r2, r0 \n"
+        
+        //Run a condition;
+        //if the value is high, turn the bit on
+        //else turn the bit off.
+      "\t          cmp r4, #1 \n"
+      "\t          beq pinOn \n"
+      "\t          b pinOff \n"
+
+      "pinOn:      add r1, #28 \n"
+        //Get the existing register from memory.
+        //Access gpio+7, or 4*7=28.
+      "\t          ldr r3, [r1, #0] \n"
+        
+        //Perform bitwise operations to enable the pin.
+      "\t          orr r3, r2 \n"
+      "\t          str r3, [r1, #0] \n"  //Store the pin register back into memory.
+        
+      "\t          b end1 \n"
+
+        //Get the existing register from memory.
+        //Access gpio+10, or 4*10=40.
+      "pinOff:     add r1, #40 \n"
+      "\t          ldr r3, [r1, #0] \n"
+        
+        //Perform bitwise operations to enable the pin.
+      "\t          orr r3, r2 \n"
+      //Store the pin register back into memory.
+      "\t          str r3, [r1, #0] \n"
+        
+      "\t          b end1 \n"
+
+      "end1: \n"
+
+
+      :  [result] "=r" (outval)
+      :  [argsPointer] "r" (&asmArgs)
+      :  "r0", "r1", "r2", "r3", "r4", "r5", "cc"
+    );
 }
 
 // adapted from setPinMode
-void pinMode(uint32_t *gpio, int pin, int mode /*, int fSel, int shift */) {
-  /* ***  COMPLETE the code here, using inline Assembler  ***  */
+int static inline pinMode(uint32_t *gpio, int pin, int mode /*, int fSel, int shift */) {
+
+  volatile struct AsmArgs {
+    uint32_t wordIndex;
+    uint32_t bitIndex;
+    uint32_t gpio;
+    uint32_t mode;
+  } asmArgs;
+
+  asmArgs.wordIndex = (pin/10)*4;
+  asmArgs.bitIndex  = (pin%10)*3;
+  asmArgs.gpio      = gpio;
+  asmArgs.mode      = mode;
+  
+
+    int outval = 0;
+    asm volatile (
+      //r0-  the word index
+      //r1-  gpio registers location
+      //r2-  temp bit that holds the on value of pin in register.
+      //r3-  existing register from data.
+      //r4-  the pin mode
+      //r5-  the address of the parameters
+      //r6-  the bit index
+      
+      //Set the parameters
+      "\t          mov r5, %[argsPointer] \n"   //Args memory location
+      
+      //Load all the parameters into the registers.
+      "\t          ldr r0, [r5, #0] \n"     //word index
+      "\t          add r5, #4 \n"
+      "\t          ldr r6, [r5, #0] \n"     //bit index
+      "\t          add r5, #4 \n"
+      "\t          ldr r1, [r5, #0] \n"     //gpio
+      "\t          add r5, #4 \n"
+      "\t          ldr r4, [r5, #0] \n"     //mode
+      
+      //Prepare the bit to write to register in memory.
+      "\t          mov r2, #1 \n"
+      "\t          lsl r2, r6 \n"
+      
+      //Get the existing register from memory.
+      //Access gpio
+      "\t          add r1, r0 \n"
+      "\t          ldr r3, [r1, #0] \n"
+      
+      //Condition: if the mode is set to OUT (i.e. 1), go to modeOut,
+      //else go to modeIn.
+      "\t          cmp r4, #1 \n"
+      "\t          beq modeOut \n"
+      "\t          b modeIn \n"
+      //Perform or bitwise operations to enable the pin.
+      //This leaves any other bits intact.
+      "modeOut:    orr r3, r2 \n"
+      
+      //Store the gpio register back into memory.
+      "\t          str r3, [r1, #0] \n"
+      
+      "\t          b end2 \n"
+
+      //We need to inverse the register holding the temp bit
+      //so we can set it to 0 in the gpio register.
+      //Perform an xor operation on a word full of 1's.
+      //This should result in the active bit being set to 0
+      //while the rest of the bits are 1's.
+      "modeIn:     mov r0, #0xFFFFFFFF \n"
+      "\t          eor r2, r0 \n"
+      
+      //bitwises and so that we set the right bit while
+      //leaving the rest of the bits intact.
+      "\t          and r3, r2 \n"
+      
+      //Store the gpio register back into memory.
+      "\t          str r3, [r1, #0] \n"
+      
+      "\t          b end2 \n"
+    "end2: \n"
+
+      :  [result] "=r" (outval)
+      :  [argsPointer] "r" (&asmArgs)
+      :  "r0", "r1", "r2", "r3", "r4", "r5", "r6", "cc"
+    );
 }
 
 void writeLED(uint32_t *gpio, int led, int value) {
-  /* ***  COMPLETE the code here, using inline Assembler  ***  */
+  digitalWrite(gpio, led, value);
 }
 
-int readButton(uint32_t *gpio, int button) {
-  /* ***  COMPLETE the code here, using inline Assembler  ***  */
+int static inline readButton(uint32_t *gpio, int button) {
+
+  volatile struct AsmArgs {
+    uint32_t gpio;
+    uint32_t button;
+  } asmArgs;
+
+  asmArgs.gpio   = gpio;
+  asmArgs.button = button;
+
+  int outval = 0;
+  asm volatile (
+    "\t          mov r0, %[argsPointer] \n"   //Args memory location
+    
+    //Load all the parameters into the registers.
+    "\t          ldr r1, [r0, #0] \n"     //gpio address
+    "\t          add r0, #4\n"
+    "\t          ldr r2, [r0, #0] \n"     //button pin.
+    
+    //Get the button input gpio+13 register.
+    //13*4=52
+    "\t          add r1, #52 \n"
+    "\t          ldr r3, [r1, #0] \n"
+    
+    //Bitshift the gpio register by the pin number,
+    //and perform bitwise and to get state of bit at
+    //the pin number.
+    "\t          lsr r3, r2 \n"
+    "\t          and r3, #1 \n"
+
+    //result should be in r3 now.
+    "\t          mov %[result], r3 \n"
+
+      :  [result] "=r" (outval)
+      :  [argsPointer] "r" (&asmArgs)
+      :  "r0", "r1", "r2", "r3", "cc"
+  );
+
+  return outval;
 }
 
 void waitForButton(uint32_t *gpio, int button) {
-  /* ***  COMPLETE the code here, just C no Assembler; you can use readButton ***  */
+  while (!readButton(gpio, button)) {
+    usleep(1000);
+  }
 }
