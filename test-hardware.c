@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "lcdBinary.c"
 
+//set this to 1 to enable tests in the terminal.
 #define TEST_HARDWARE 1
 
 void printGPIO(uint32_t *gpio) {
@@ -25,26 +26,34 @@ void printGPIO(uint32_t *gpio) {
   }
 }
 
-void testWrite() {
-
-}
-
 void testDigital(uint32_t *gpio) {
     printf("digitalWrite test!\n");
     printf("Turning LED off and waiting 2 secs...\n");
     digitalWrite(gpio, 13, 0);
     sleep(2);
     printf("LED on...\n");
-    digitalWrite(gpio, 13, 1);
+    digitalWrite(gpio, 5, 1);
     sleep(1);
     printf("LED off...\n");
-    digitalWrite(gpio, 13, 0);
-    sleep(1);
+    digitalWrite(gpio, 5, 0);
+
     printf("LED on...\n");
     digitalWrite(gpio, 13, 1);
     sleep(1);
     printf("LED off...\n");
     digitalWrite(gpio, 13, 0);
+
+    sleep(1);
+    printf("LED on...\n");
+    digitalWrite(gpio, 13, 1);
+    digitalWrite(gpio, 5, 1);
+    sleep(1);
+    printf("LED off...\n");
+    digitalWrite(gpio, 13, 0);
+
+    sleep(1);
+    digitalWrite(gpio, 5, 0);
+
 }
 
 void pinModeTest(uint32_t *gpio) {
@@ -114,9 +123,11 @@ void testHardware(uint32_t *gpio) {
     if (TEST_HARDWARE) {
         printf("\033[33m ===Teo's whacky testing code===\n");
 
+        pinMode(gpio, 13, 1);
+        pinMode(gpio, 5, 1);
 
         //pinModeTest(gpio);
-        readButtonTest(gpio);
+        //readButtonTest(gpio);
 
         testDigital(gpio);
         testWaitButton(gpio);
