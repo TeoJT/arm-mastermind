@@ -12,14 +12,15 @@
 #  define	TRUE	(1==1)
 #  define	FALSE	(1==2)
 #endif
-#define	PAGE_SIZE		(4*1024)
-#define	BLOCK_SIZE		(4*1024)
 
 #define	INPUT			 0
 #define	OUTPUT			 1
 
 #define	LOW			 0
 #define	HIGH			 1
+
+#define IN  0
+#define OUT 1
 
 
 //https://cpulator.01xz.net/?sys=arm-de1soc&d_audio=48000
@@ -62,7 +63,7 @@ int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
 
     volatile struct AsmArgs {
       uint32_t pin;
-      uint32_t gpio;
+      uint32_t* gpio;
       uint32_t value;
     } asmArgs;
 
@@ -113,7 +114,7 @@ int static inline pinMode(uint32_t *gpio, int pin, int mode /*, int fSel, int sh
   volatile struct AsmArgs {
     uint32_t wordIndex;
     uint32_t bitIndex;
-    uint32_t gpio;
+    uint32_t* gpio;
     uint32_t mode;
   } asmArgs;
 
@@ -199,7 +200,7 @@ void writeLED(uint32_t *gpio, int led, int value) {
 int static inline readButton(uint32_t *gpio, int button) {
 
   volatile struct AsmArgs {
-    uint32_t gpio;
+    uint32_t* gpio;
     uint32_t button;
   } asmArgs;
 

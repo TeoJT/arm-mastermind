@@ -3,7 +3,7 @@
 #include "lcdBinary.c"
 
 //set this to 1 to enable tests in the terminal.
-#define TEST_HARDWARE 1
+#define TEST_HARDWARE 0
 
 void printGPIO(uint32_t *gpio) {
   for (int i = 0; i < 15; i++) {
@@ -66,15 +66,15 @@ void pinModeTest(uint32_t *gpio) {
     printf("pinMode test!\n");
 
     printf("\nsetting pin 13 to INPUT\n");
-    pinMode(gpio, 13, INPUT);
+    pinMode(gpio, 13, 0);
     printGPIO(gpio);
 
     printf("\nsetting pin 13 to OUTPUT\n");
-    pinMode(gpio, 13, OUTPUT);
+    pinMode(gpio, 13, 1);
     printGPIO(gpio);
     
     printf("\nsetting pin 15 to OUTPUT\n");
-    pinMode(gpio, 15, OUTPUT);
+    pinMode(gpio, 15, 1);
     printGPIO(gpio);
 
     printf("\n\n");
@@ -83,7 +83,7 @@ void pinModeTest(uint32_t *gpio) {
 void readButtonTest(uint32_t *gpio) {
   printf("button test!\n");
   printf("I'm gonna assume pinmode is working.\n");
-  pinMode(gpio, 19, INPUT);
+  pinMode(gpio, 19, 0);
 
   for (int i = 0; i < 3; i++) {
       printf("reading button on pin 19..!\n");

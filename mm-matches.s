@@ -37,10 +37,142 @@ exit:	@MOV	 R0, R4		@ load result to output register
 @ this is the matching fct that should be callable from C	
 matches:			@ Input: R0, R1 ... ptr to int arrays to match 
 					@ Output: R0 ... exact matches (10s) and approx matches (1s) of base COLORS
-	push {r3-r8}
+	push {r2-r8}
+	mov r10, lr
+	
+	@ r2, r3, and r4 will contain the numbers of the secret.
+	ldm r0!, {r2-r4}
+	
+	@ r5, r6, and r7 will contain the numbers of the guess.
+	ldm r1!, {r5-r7}
+	
+	@ We no longer need the addresses of the numbers so
+	@ we can use r0 and r1 for other perposes now.
+	@ For now we'll use r0 to keep co
+	mov r0, #0
+	mov r1, #0
+	
+	@ Each time we check each digit from the secret,
+	@ we may need to skip ahead to the next digit if a
+	@ matching digit is found in a branching statement.
+	@ To jump to that next digit, store the code address of
+	@ the code that reads the next digit.
+	ldr r8, =di2
+	
+	
+	@ check secret digit 1 and guess digit 1
+	cmp r2, r5
+	
+	@ Clear the digit in case it is a match,
+	@ as we don't want the rest of the algorithm
+	@ to detect it if it matches.
+	mov r9, r5
+	mov r5, #0
+	beq correctNum
+	
+	@ If it matches, this line will be skipped, and
+	@ the guess digit in that register will be erased.
+	@ If not, then the digit is restored to the register.
+	mov r5, r9
+	
+	@ Now to check the other digits.
+	@ Wash, rinse, repeat, except since r2 and r6 are not digits
+	@ in the same pos, we will skip to "approxNum"
+	@ instead if they match.
+	@ Compare 1st secret digit to 2nd guess digit
+	cmp r2, r6
+	mov r9, r6
+	mov r6, #0
+	beq approxNum
+	mov r6, r9
+	
+	@ Same deal here.
+	@ Compare 1st secret digit to 3rd guess digit
+	cmp r2, r7
+	mov r9, r7
+	mov r7, #0
+	beq approxNum
+	mov r7, r9
 
-	pop {r3-r8}
-    bx lr
+	b di2
+
+di2:	
+	@ Same as before, we're just comparing the rest
+	@ of the secret digits to the guess digits.
+	@ Compare 2nd secret digit to 2nd guess digit
+	ldr r8, =di3
+	cmp r3, r6
+	mov r9, r6
+	mov r6, #0
+	beq correctNum
+	mov r6, r9
+	
+	@ Compare 2nd secret digit to 1st guess digit
+	cmp r3, r5
+	mov r9, r5
+	mov r5, #0
+	beq approxNum
+	mov r5, r9
+	
+	@ Compare 2nd secret digit to 3rd guess digit
+	cmp r3, r7
+	mov r9, r7
+	mov r7, #0
+	beq approxNum
+	mov r7, r9
+
+	b di3
+	
+di3:	
+	@ Compare 3rd secret digit to 3rd guess digit
+	ldr r8, =did
+	cmp r4, r7
+	mov r9, r7
+	mov r7, #0
+	beq correctNum
+	mov r7, r9
+	
+	@ Compare 3rd secret digit to 1st guess digit
+	cmp r4, r5
+	mov r9, r5
+	mov r5, #0
+	beq approxNum
+	mov r5, r9
+	
+	@ Compare 3rd secret digit to 2nd guess digit
+	cmp r4, r6
+	mov r9, r6
+	mov r6, #0
+	beq approxNum
+	mov r6, r9
+
+	b did
+	
+did:
+    @ Now "combine" the matches and aprroxes into a single register.
+	lsl r1, #2
+	orr r0, r1
+	pop {r2-r8}
+    bx r10
+	
+
+@ Amber expects
+@ r2- number to compare with
+@ r3- other num to compare with
+@ r4- address
+
+approxNum:
+	@ Increment the number of approx matches by 1
+	@ and go to the next digit.
+	add r0, #1
+	bx r8
+	
+
+correctNum:
+	@ Increment the number of correct matches by 1
+	@ and go to the next digit.
+	add r1, #1
+	bx r8
 
 
 

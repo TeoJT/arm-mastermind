@@ -112,6 +112,8 @@
 #define LOW 0
 #define HIGH 1
 
+#define BLINK_DELAY 200
+
 // =======================================================
 // Wiring (see inlined initialisation routine)
 
@@ -126,20 +128,6 @@
 /* SECTION: constants and prototypes                       */
 /* ------------------------------------------------------- */
 
-// =======================================================
-// char data for the CGRAM, i.e. defining new characters for the display
-
-static unsigned char newChar[8] =
-    {
-        0b11111,
-        0b10001,
-        0b10001,
-        0b10101,
-        0b11111,
-        0b10001,
-        0b10001,
-        0b11111,
-};
 
 /* Constants */
 
@@ -152,18 +140,6 @@ static int *theSeq = NULL;
 
 static int *seq1, *seq2, *cpy1, *cpy2;
 
-/* --------------------------------------------------------------------------- */
-
-// data structure holding data on the representation of the LCD
-struct lcdDataStruct
-{
-  int bits, rows, cols;
-  int rsPin, strbPin;
-  int dataPins[8];
-  int cx, cy;
-};
-
-static int lcdControl;
 
 /* ***************************************************************************** */
 /* INLINED fcts from wiringPi/devLib/lcd.c: */
@@ -211,13 +187,6 @@ static int timed_out = 0;
 // misc prototypes
 
 int failure(int fatal, const char *message, ...);
-// void waitForEnter(void);
-// void waitForButton(uint32_t *gpio, int button);
-
-/* ======================================================= */
-/* SECTION: hardware interface (LED, button, LCD display)  */
-/* ------------------------------------------------------- */
-/* low-level interface to the hardware */
 
 /* ********************************************************** */
 /* COMPLETE the code for all of the functions in this SECTION */
@@ -226,25 +195,7 @@ int failure(int fatal, const char *message, ...);
 /* You can also directly implement them here (inline Asm).    */
 /* ********************************************************** */
 
-/* These are just prototypes; you need to complete the code for each function */
-extern void matches();
-
-/* send a @value@ (LOW or HIGH) on pin number @pin@; @gpio@ is the mmaped GPIO base address */
-// void //digitalWrite(uint32_t *gpio, int pin, int value);
-
-/* set the @mode@ of a GPIO @pin@ to INPUT or OUTPUT; @gpio@ is the mmaped GPIO base address */
-// void pinMode(uint32_t *gpio, int pin, int mode);
-
-/* send a @value@ (LOW or HIGH) on pin number @pin@; @gpio@ is the mmaped GPIO base address */
-/* can use //digitalWrite(), depending on your implementation */
-// void writeLED(uint32_t *gpio, int led, int value);
-
-/* read a @value@ (LOW or HIGH) from pin number @pin@ (a button device); @gpio@ is the mmaped GPIO base address */
-// int readButton(uint32_t *gpio, int button);
-
-/* wait for a button input on pin number @button@; @gpio@ is the mmaped GPIO base address */
-/* can use readButton(), depending on your implementation */
-// void waitForButton(uint32_t *gpio, int button);
+extern int matches(int* secret, int* guess);
 
 /* ======================================================= */
 /* SECTION: game logic                                     */
@@ -376,18 +327,6 @@ uint64_t timeInMicroseconds()
   return current_time.tv_usec;
 }
 
-/* this should be the callback, triggered via an interval timer, */
-/* that is set-up through a call to sigaction() in the main fct. */
-void timer_handler(int signum)
-{
-  /* ***  COMPLETE the code here  ***  */
-}
-
-/* initialise time-stamps, setup an interval timer, and install the timer_handler callback */
-void initITimer(uint64_t timeout)
-{
-  /* ***  COMPLETE the code here  ***  */
-}
 
 /* ======================================================= */
 /* SECTION: Aux function                                   */
@@ -439,278 +378,7 @@ void delay(unsigned int howLong)
   nanosleep(&sleeper, &dummy);
 }
 
-/* From wiringPi code; comment by Gordon Henderson
- * delayMicroseconds:
- *	This is somewhat intersting. It seems that on the Pi, a single call
- *	to nanosleep takes some 80 to 130 microseconds anyway, so while
- *	obeying the standards (may take longer), it's not always what we
- *	want!
- *
- *	So what I'll do now is if the delay is less than 100uS we'll do it
- *	in a hard loop, watching a built-in counter on the ARM chip. This is
- *	somewhat sub-optimal in that it uses 100% CPU, something not an issue
- *	in a microcontroller, but under a multi-tasking, multi-user OS, it's
- *	wastefull, however we've no real choice )-:
- *
- *      Plan B: It seems all might not be well with that plan, so changing it
- *      to use gettimeofday () and poll on that instead...
- *********************************************************************************
- */
 
-void delayMicroseconds(unsigned int howLong)
-{
-  struct timespec sleeper;
-  unsigned int uSecs = howLong % 1000000;
-  unsigned int wSecs = howLong / 1000000;
-
-  /**/ if (howLong == 0)
-    return;
-#if 0
-  else if (howLong  < 100)
-    delayMicrosecondsHard (howLong) ;
-#endif
-  else
-  {
-    sleeper.tv_sec = wSecs;
-    sleeper.tv_nsec = (long)(uSecs * 1000L);
-    nanosleep(&sleeper, NULL);
-  }
-}
-
-/* ======================================================= */
-/* SECTION: LCD functions                                  */
-/* ------------------------------------------------------- */
-/* medium-level interface functions (all in C) */
-
-/* from wiringPi:
- * strobe:
- *	Toggle the strobe (Really the "E") pin to the device.
- *	According to the docs, data is latched on the falling edge.
- *********************************************************************************
- */
-
-void strobe(const struct lcdDataStruct *lcd)
-{
-
-  // Note timing changes for new version of delayMicroseconds ()
-  // digitalWrite(gpio, lcd->strbPin, 1);
-  delayMicroseconds(50);
-  // digitalWrite(gpio, lcd->strbPin, 0);
-  delayMicroseconds(50);
-}
-
-/*
- * sentDataCmd:
- *	Send an data or command byte to the display.
- *********************************************************************************
- */
-
-void sendDataCmd(const struct lcdDataStruct *lcd, unsigned char data)
-{
-  register unsigned char myData = data;
-  unsigned char i, d4;
-
-  if (lcd->bits == 4)
-  {
-    d4 = (myData >> 4) & 0x0F;
-    for (i = 0; i < 4; ++i)
-    {
-      // digitalWrite(gpio, lcd->dataPins[i], (d4 & 1));
-      d4 >>= 1;
-    }
-    strobe(lcd);
-
-    d4 = myData & 0x0F;
-    for (i = 0; i < 4; ++i)
-    {
-      // digitalWrite(gpio, lcd->dataPins[i], (d4 & 1));
-      d4 >>= 1;
-    }
-  }
-  else
-  {
-    for (i = 0; i < 8; ++i)
-    {
-      // digitalWrite(gpio, lcd->dataPins[i], (myData & 1));
-      myData >>= 1;
-    }
-  }
-  strobe(lcd);
-}
-
-/*
- * lcdPutCommand:
- *	Send a command byte to the display
- *********************************************************************************
- */
-
-void lcdPutCommand(const struct lcdDataStruct *lcd, unsigned char command)
-{
-#ifdef DEBUG
-  fprintf(stderr, "lcdPutCommand: //digitalWrite(%d,%d) and sendDataCmd(%d,%d)\n", lcd->rsPin, 0, lcd, command);
-#endif
-  // digitalWrite(gpio, lcd->rsPin, 0);
-  sendDataCmd(lcd, command);
-  delay(2);
-}
-
-void lcdPut4Command(const struct lcdDataStruct *lcd, unsigned char command)
-{
-  register unsigned char myCommand = command;
-  register unsigned char i;
-
-  // digitalWrite(gpio, lcd->rsPin, 0);
-
-  for (i = 0; i < 4; ++i)
-  {
-    // digitalWrite(gpio, lcd->dataPins[i], (myCommand & 1));
-    myCommand >>= 1;
-  }
-  strobe(lcd);
-}
-
-/*
- * lcdHome: lcdClear:
- *	Home the cursor or clear the screen.
- *********************************************************************************
- */
-
-void lcdHome(struct lcdDataStruct *lcd)
-{
-#ifdef DEBUG
-  fprintf(stderr, "lcdHome: lcdPutCommand(%d,%d)\n", lcd, LCD_HOME);
-#endif
-  lcdPutCommand(lcd, LCD_HOME);
-  lcd->cx = lcd->cy = 0;
-  delay(5);
-}
-
-void lcdClear(struct lcdDataStruct *lcd)
-{
-#ifdef DEBUG
-  fprintf(stderr, "lcdClear: lcdPutCommand(%d,%d) and lcdPutCommand(%d,%d)\n", lcd, LCD_CLEAR, lcd, LCD_HOME);
-#endif
-  lcdPutCommand(lcd, LCD_CLEAR);
-  lcdPutCommand(lcd, LCD_HOME);
-  lcd->cx = lcd->cy = 0;
-  delay(5);
-}
-
-/*
- * lcdPosition:
- *	Update the position of the cursor on the display.
- *	Ignore invalid locations.
- *********************************************************************************
- */
-
-void lcdPosition(struct lcdDataStruct *lcd, int x, int y)
-{
-  // struct lcdDataStruct *lcd = lcds [fd] ;
-
-  if ((x > lcd->cols) || (x < 0))
-    return;
-  if ((y > lcd->rows) || (y < 0))
-    return;
-
-  lcdPutCommand(lcd, x + (LCD_DGRAM | (y > 0 ? 0x40 : 0x00) /* rowOff [y] */));
-
-  lcd->cx = x;
-  lcd->cy = y;
-}
-
-/*
- * lcdDisplay: lcdCursor: lcdCursorBlink:
- *	Turn the display, cursor, cursor blinking on/off
- *********************************************************************************
- */
-
-void lcdDisplay(struct lcdDataStruct *lcd, int state)
-{
-  if (state)
-    lcdControl |= LCD_DISPLAY_CTRL;
-  else
-    lcdControl &= ~LCD_DISPLAY_CTRL;
-
-  lcdPutCommand(lcd, LCD_CTRL | lcdControl);
-}
-
-void lcdCursor(struct lcdDataStruct *lcd, int state)
-{
-  if (state)
-    lcdControl |= LCD_CURSOR_CTRL;
-  else
-    lcdControl &= ~LCD_CURSOR_CTRL;
-
-  lcdPutCommand(lcd, LCD_CTRL | lcdControl);
-}
-
-void lcdCursorBlink(struct lcdDataStruct *lcd, int state)
-{
-  if (state)
-    lcdControl |= LCD_BLINK_CTRL;
-  else
-    lcdControl &= ~LCD_BLINK_CTRL;
-
-  lcdPutCommand(lcd, LCD_CTRL | lcdControl);
-}
-
-/*
- * lcdPutchar:
- *	Send a data byte to be displayed on the display. We implement a very
- *	simple terminal here - with line wrapping, but no scrolling. Yet.
- *********************************************************************************
- */
-
-void lcdPutchar(struct lcdDataStruct *lcd, unsigned char data)
-{
-  // digitalWrite(gpio, lcd->rsPin, 1);
-  sendDataCmd(lcd, data);
-
-  if (++lcd->cx == lcd->cols)
-  {
-    lcd->cx = 0;
-    if (++lcd->cy == lcd->rows)
-      lcd->cy = 0;
-
-    // TODO: inline computation of address and eliminate rowOff
-    lcdPutCommand(lcd, lcd->cx + (LCD_DGRAM | (lcd->cy > 0 ? 0x40 : 0x00) /* rowOff [lcd->cy] */));
-  }
-}
-
-/*
- * lcdPuts:
- *	Send a string to be displayed on the display
- *********************************************************************************
- */
-
-void lcdPuts(struct lcdDataStruct *lcd, const char *string)
-{
-  while (*string)
-    lcdPutchar(lcd, *string++);
-}
-
-int buttonDown()
-{
-  return ((*(gpio + 13 /* GPLEV0 */) & (1 << (BUTTON & 31))) != 0);
-}
-
-/* ======================================================= */
-/* SECTION: aux functions for game logic                   */
-/* ------------------------------------------------------- */
-
-/* ********************************************************** */
-/* COMPLETE the code for all of the functions in this SECTION */
-/* Implement these as C functions in this file                */
-/* ********************************************************** */
-
-/* --------------------------------------------------------------------------- */
-/* interface on top of the low-level pin I/O code */
-
-/* blink the led on pin @led@, @c@ times */
-void blinkN(uint32_t *gpio, int led, int c)
-{
-  /* ***  COMPLETE the code here  ***  */
-}
 
 /* Check if the sequene is correct and print relivant statement*/
 
@@ -737,73 +405,41 @@ void endOfInputLights(int buttonPressCount)
   for (int i = 0; i < buttonPressCount; i++)
   {
     digitalWrite(gpio, LED, HIGH);
-    delay(1000);
+    delay(BLINK_DELAY);
     digitalWrite(gpio, LED, LOW);
-    delay(1000);
+    delay(BLINK_DELAY);
   }
 }
 
-void communicateGuessAccuracy(int *numGuess)
+void communicateGuessAccuracy(int match, int approx)
 {
-
+  printf("Guess accuracy: matches: %d, approx: %d\n", match, approx);
   // Blink green LED for exact matches
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < match; i++)
   {
     digitalWrite(gpio, LED, HIGH);
-    delay(1000);
+    delay(BLINK_DELAY);
     digitalWrite(gpio, LED, LOW);
-    delay(1000);
+    delay(BLINK_DELAY);
   }
 
   // Red LED seperator
-  delay(1000);
+  delay(BLINK_DELAY);
 
   digitalWrite(gpio, LED2, HIGH);
-  delay(1000);
+  delay(BLINK_DELAY);
   digitalWrite(gpio, LED2, LOW);
 
-  delay(1000);
+  delay(BLINK_DELAY);
 
-  // Blink green LED for aproxomite matches
-  for (int i = 0; i < 1; i++)
+  // Blink green LED for approxomite matches
+  for (int i = 0; i < approx; i++)
   {
     digitalWrite(gpio, LED, HIGH);
-    delay(1000);
+    delay(BLINK_DELAY);
     digitalWrite(gpio, LED, LOW);
-    delay(1000);
+    delay(BLINK_DELAY);
   }
-
-  /*for (int i = 0; i < 3; i++)
-  {
-    if (numGuess[i] == theSeq[i])
-    {
-      printf("Guess %d and %d are an extact match\n", numGuess[i], theSeq[i]);
-    }
-  }
-
-  for (int i = 0; i < 3; i++)
-  {
-    for (int j = 0; j < 3; i++)
-    {
-      if (numGuess[j] == theSeq[i])
-      {
-        printf("There is an aproxomite match\n");
-      }
-    }
-  }*/
-  /*for (int i = 0; i < 3; i++)
-{
-  if (numGuess[1] == theSeq[i])
-  {
-    printf("There is an aproxomite match\n");
-  }
-}
-  for (int i = 0; i < 3; i++)
-{
-  if (numGuess[2] == theSeq[i])
-  {
-    printf("There is an aproxomite match\n");
-  }   */
 }
 
 /* ======================================================= */
@@ -813,9 +449,6 @@ void communicateGuessAccuracy(int *numGuess)
 int main(int argc, char *argv[])
 { // this is just a suggestion of some variable that you may want to use
   printf("Entering Main Program\n");
-  struct lcdDataStruct *lcd;
-  int bits, rows, cols;
-  unsigned char func;
 
   int found = 0, attempts = 0, i, j, code;
   int c, d, buttonPressed, rel, foo;
@@ -838,7 +471,6 @@ int main(int argc, char *argv[])
   char str_in[20], str[20] = "some text";
   int verbose = 0, debug = 0, help = 0, opt_m = 0, opt_n = 0, opt_s = 0, unit_test = 0, res_matches = 0;
 
-  printf("[The.] Does this work? Work? Work?\n");
 
   // -------------------------------------------------------
   // process command-line arguments
@@ -928,31 +560,6 @@ int main(int argc, char *argv[])
     showMatches(res_matches, seq1, seq2, 1);
     exit(EXIT_SUCCESS);
   }
-  else
-  {
-    /* nothing to do here; just continue with the rest of the main fct */
-  }
-
-  if (opt_s)
-  { // if -s option is given, use the sequence as secret sequence
-    if (theSeq == NULL)
-      theSeq = (int *)malloc(seqlen * sizeof(int));
-    readSeq(theSeq, opt_s);
-    if (verbose)
-    {
-      fprintf(stderr, "Running program with secret sequence:\n");
-      showSeq(theSeq);
-    }
-  }
-
-  // -------------------------------------------------------
-  // LCD constants, hard-coded: 16x2 display, using a 4-bit connection
-  bits = 4;
-  cols = 16;
-  rows = 2;
-  // -------------------------------------------------------
-
-  printf("Raspberry Pi LCD driver, for a %dx%d display (%d-bit wiring) \n", cols, rows, bits);
 
   if (geteuid() != 0)
     fprintf(stderr, "setup: Must be root. (Did you forget sudo?)\n");
@@ -982,38 +589,28 @@ int main(int argc, char *argv[])
   // Configuration of LED and BUTTON
   // -----------------------------------------------------------------------------
   // setting LED 1 the mode
-  fprintf(stderr, "setting pin %d to %d ...\n", pinLED, OUTPUT);
-  fSel = 1;                                                         // GPIO 47 lives in register 4 (GPFSEL)
-  shift = 9;                                                        // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
-  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift); // Sets bits to one = output
+  pinMode(gpio, LED, OUT);
 
   // setting LED 2 the mode
-  fprintf(stderr, "setting pin %d to %d ...\n", pin2LED2, OUTPUT);
-  fSel = 0;                                                         // GPIO 47 lives in register 4 (GPFSEL)
-  shift = 15;                                                       // GPIO 47 sits in slot 7 of register 4, thus shift by 7*3 (3 bits per pin)
-  *(gpio + fSel) = (*(gpio + fSel) & ~(7 << shift)) | (1 << shift); // Sets bits to one = output
+  pinMode(gpio, LED2, OUT);
 
   // setting BUTTON the mode
-  fSel = 1;   // 2 // GPIO 24 lives in register 2 (GPFSEL2)
-  shift = 27; // 12 // GPIO 24 sits in slot 4 of register 3, thus shift by 4*3 (3 bits per pin)
-  // C version of mode input for button
-  *(gpio + fSel) = *(gpio + fSel) & ~(7 << shift); // Sets bits to one = output
+  pinMode(gpio, BUTTON, IN);
 
   int theValue;
   unsigned int howLong = DELAY;
+  
 
   // Test the LED's by turning them on and off at the begining
 
-  // Uncomment this when done.
-
-  digitalWrite(gpio, LED, HIGH);
-  delay(1000);
-  digitalWrite(gpio, LED2, HIGH);
-  delay(1000);
-  digitalWrite(gpio, LED, LOW);
-  delay(1000);
-  digitalWrite(gpio, LED2, LOW);
-  delay(1000);
+  // digitalWrite(gpio, LED, HIGH);
+  // delay(1000);
+  // digitalWrite(gpio, LED2, HIGH);
+  // delay(1000);
+  // digitalWrite(gpio, LED, LOW);
+  // delay(1000);
+  // digitalWrite(gpio, LED2, LOW);
+  // delay(1000);
 
   // -----------------------------------------------------------------------------
 
@@ -1024,41 +621,11 @@ int main(int argc, char *argv[])
   // you can use this code as-is, but you need to implement //digitalWrite() and
   // pinMode() which are called from this code
   // Create a new LCD:
-  lcd = (struct lcdDataStruct *)malloc(sizeof(struct lcdDataStruct));
-  if (lcd == NULL)
-    return -1;
 
-  // hard-wired GPIO pins
-  lcd->rsPin = RS_PIN;
-  lcd->strbPin = STRB_PIN;
-  lcd->bits = 4;
-  lcd->rows = rows; // # of rows on the display
-  lcd->cols = cols; // # of cols on the display
-  lcd->cx = 0;      // x-pos of cursor
-  lcd->cy = 0;      // y-pos of curosr
-
-  lcd->dataPins[0] = DATA0_PIN;
-  lcd->dataPins[1] = DATA1_PIN;
-  lcd->dataPins[2] = DATA2_PIN;
-  lcd->dataPins[3] = DATA3_PIN;
-  // lcd->dataPins [4] = d4 ;
-  // lcd->dataPins [5] = d5 ;
-  // lcd->dataPins [6] = d6 ;
-  // lcd->dataPins [7] = d7 ;
+  
 
   // lcds [lcdFd] = lcd ;
 
-  // digitalWrite(gpio, lcd->rsPin, 0);
-  pinMode(gpio, lcd->rsPin, OUTPUT);
-  // digitalWrite(gpio, lcd->strbPin, 0);
-  pinMode(gpio, lcd->strbPin, OUTPUT);
-
-  for (i = 0; i < bits; ++i)
-  {
-    // digitalWrite(gpio, lcd->dataPins[i], 0);
-    pinMode(gpio, lcd->dataPins[i], OUTPUT);
-  }
-  delay(35); // mS
 
   // Gordon Henderson's explanation of this part of the init code (from wiringPi):
   // 4-bit mode?
@@ -1121,11 +688,8 @@ int main(int argc, char *argv[])
   // END lcdInit ------
   // -----------------------------------------------------------------------------
   // Start of game
-  printf("testferyhgfesdhubfseduiyghbfeswUYIHESFWUIYHSFE\n");
-  printf("Printing welcome message on the LCD display ...\n");
   /* ***  COMPLETE the code here  ***  */
 
-  printf("This is before the thing\n");
   /* initialise the secret sequence */
   if (!opt_s)
     printf("It's this one\n");
@@ -1134,20 +698,23 @@ int main(int argc, char *argv[])
     printf("No it was this one\n");
   showSeq(theSeq);
 
-  printf("It got past the thing\n");
 
-  testHardware(gpio);
+  //testHardware(gpio);
 
-  // optionally one of these 2 calls:
-  // waitForEnter () ;
-  // waitForButton (gpio, pinButton) ;
+  
 
   // -----------------------------------------------------------------------------
   // +++++ main loop
   // testHardware(gpio);
-  matches();
+  printf("matches test\n");
+  int ssss[] = {2,1,2};
+  int gggg[] = {2,1,3};
+  int answr = matches(&ssss, &gggg);
+  printf("approx:%d, correct:%d\n", (answr & 0x03), ((answr >> 2) & 0x03));
 
-  printf("This is before the while loop\n");
+  printf("Welcome to mastermind! Enter a number on the button to begin...\n");
+  waitForButton(gpio, BUTTON);
+
 
   // TODO make typedef boolean instead of int.
   int isPressed = 0;
@@ -1160,8 +727,6 @@ int main(int argc, char *argv[])
   int numberOfNumbersEnetered = 0;
   int wasPressed = 0;
   int roundNumber = 0;
-  // int numGuess = theSeq;
-  // int numGuess[] = {1, 2, 3};
 
   while (!found)
   {
@@ -1173,129 +738,77 @@ int main(int argc, char *argv[])
     }
 
     timeInterval = clock() - timeToSubtract;
-    if (buttonDown() && !isPressed)
+    if (readButton(gpio, BUTTON) && !isPressed)
     {
       isPressed = 1;
       wasPressed = 1;
 
       buttonPressCount++;
-      printf("Press! %d\n", buttonPressCount);
+      timeToSubtract = clock();
 
       usleep(2000);
     }
 
-    if (!buttonDown() && isPressed)
+    if (!readButton(gpio, BUTTON) && isPressed)
     {
       isPressed = 0;
-      timeToSubtract = clock();
     }
 
-    if ((timeInterval > 2000000) && wasPressed) // Set's time interval to 2 seconds
+    if ((timeInterval > 1000000) && wasPressed) // Set's time interval to 2 seconds
     {
       wasPressed = 0;
-      timeToSubtract = clock();
 
-      // Blink red LED once to acknoledge input of a number
-      // digitalWrite(gpio, LED2, HIGH);
-      // delay(1000);
-      // digitalWrite(gpio, LED2, LOW);
+      //Blink red LED once to acknoledge input of a number
+      digitalWrite(gpio, LED2, HIGH);
+      delay(BLINK_DELAY);
+      digitalWrite(gpio, LED2, LOW);
 
       printf("The time between was greater than 2 seconds moving on to the next number\n");
-      // endOfInputLights(buttonPressCount);
+      
+      endOfInputLights(buttonPressCount);
       numGuess[numberOfNumbersEnetered] = buttonPressCount;
-      printf("The number entered into the sequnce was %d\n", numGuess[numberOfNumbersEnetered]);
+      printf("The number entered into the sequence was %d\n", numGuess[numberOfNumbersEnetered]);
       numberOfNumbersEnetered++;
       if (numberOfNumbersEnetered >= 3) // Check the sequnce if 3 numbers entered
       {
-        // digitalWrite(gpio, LED2, HIGH);
-        // delay(1000);
-        // digitalWrite(gpio, LED2, LOW);
-        // delay(1000);
-        // digitalWrite(gpio, LED2, HIGH);
-        // delay(1000);
-        // digitalWrite(gpio, LED2, LOW);
-        found = checkIfSequnceCorrect(numGuess, found);
-        communicateGuessAccuracy(numGuess);
+        int* numGuessPointr = numGuess;
+        printf("%d, %d, %d\n", *(theSeq), *(theSeq+1), *(theSeq+2));
+        printf("%d, %d, %d\n", *(numGuessPointr), *(numGuessPointr+1), *(numGuessPointr+2));
+        int answr = matches(theSeq, numGuessPointr);
+        int approx = (answr & 0x03);
+        int match = ((answr >> 2) & 0x03);
+
+        digitalWrite(gpio, LED2, HIGH);
+        delay(BLINK_DELAY);
+        digitalWrite(gpio, LED2, LOW);
+        delay(BLINK_DELAY);
+        digitalWrite(gpio, LED2, HIGH);
+        delay(BLINK_DELAY);
+        digitalWrite(gpio, LED2, LOW);
+
+        found = (match == 3);
+
+        delay(1000);
+        communicateGuessAccuracy(match, approx);
         if (!found)
         {
-          printf("Begining new round\n");
+          printf("Beginning new round\n");
+          printf("Please enter number: \n");
+          waitForButton(gpio, BUTTON);
+          timeToSubtract = clock();
         }
 
         numberOfNumbersEnetered = 0;
         roundNumber++;
       }
-
-      buttonPressCount = 0;
-    }
-
-    /*while (numberOfNumbersEnetered < 3)
-    {
-
-      if (buttonDown() && !isPressed)
-      {
-        timeInterval = clock() - timeToSubtract;
-
-        count++;
-        printf("Press! %d\n", count);
-        countNumberForEachInput++;
-
-        usleep(1000);
-
-        isPressed = 1;
-      }
-
-      if (!buttonDown() && isPressed)
-      {
-        isPressed = 0;
+      else {
+        printf("Please enter number: \n");
+        waitForButton(gpio, BUTTON);
         timeToSubtract = clock();
       }
 
-      if (timeInterval > 2000000) // Set's time interval to 2 seconds
-      {
-        digitalWrite(gpio, LED, HIGH);
-        delay(1000);
-        digitalWrite(gpio, LED, LOW);
-
-        double time_taken = ((double)timeInterval) / CLOCKS_PER_SEC; // calculate the elapsed time
-        printf("The time interval was %f\n", time_taken);
-        timeInterval = 0;
-        numGuess[attempts] = countNumberForEachInput;
-        printf("Number guess: %d, This is attempt: %d\n", numGuess[attempts], attempts);
-        countNumberForEachInput = 0;
-        count = 0;
-        attempts++;
-        numberOfNumbersEnetered++;
-      }
+      buttonPressCount = 0;
     }
-    numberOfNumbersEnetered = 0;
-
-    if (countMatches(theSeq, numGuess))
-    {
-      printf("The sequnce was correct\n");
-
-      // End loop
-      found = 1;
-    }
-    else
-    {
-
-      for (int i = 0; i < 3; i++)
-      {
-        digitalWrite(gpio, LED2, HIGH);
-        delay(1000);
-        digitalWrite(gpio, LED2, LOW);
-        delay(1000);
-      }
-    }*/
-
-    // double time_taken = ((double)timer)/CLOCKS_PER_SEC; // calculate the elapsed time
-    // printf("The program took %f seconds to execute\n", time_taken);
-
-    // printf("Please enter the first number in your guess\n");
-
-    // printf("Please enter the second number in your guess\n");
-
-    // printf("Please enter the third number in your guess\n");
 
     /* ******************************************************* */
     /* ***  COMPLETE the code here  ***                        */
@@ -1309,15 +822,16 @@ int main(int argc, char *argv[])
   }
   if (found)
   {
+    printf("Sequence found!");
 
     digitalWrite(gpio, LED2, HIGH);
 
     for (int i = 0; i < 3; i++)
     {
       digitalWrite(gpio, LED, HIGH);
-      delay(1000);
+      delay(BLINK_DELAY);
       digitalWrite(gpio, LED, LOW);
-      delay(1000);
+      delay(BLINK_DELAY);
     }
 
     digitalWrite(gpio, LED2, LOW);
