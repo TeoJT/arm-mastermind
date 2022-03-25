@@ -1119,6 +1119,7 @@ int main(int argc, char *argv[])
   int timeToSubtract = 0;
   int numberOfNumbersEnetered = 0;
   int wasPressed = 0;
+  int roundNumber = 0;
   // int numGuess = theSeq;
   // int numGuess[] = {1, 2, 3};
 
@@ -1126,6 +1127,13 @@ int main(int argc, char *argv[])
 
   while (!found)
   {
+
+    if (roundNumber == 3)
+    {
+      printf("That's the game done\n");
+      break;
+    }
+    
 
     timeInterval = clock() - timeToSubtract;
     if (buttonDown() && !isPressed)
@@ -1152,12 +1160,15 @@ int main(int argc, char *argv[])
       printf("The time between was greater than 2 seconds moving on to the next number\n");
       endOfInputLights(buttonPressCount);
       numGuess[numberOfNumbersEnetered] = buttonPressCount;
-      printf("The number entered into he sequnce was %d\n", numGuess[numberOfNumbersEnetered]);
-      if (numberOfNumbersEnetered >= 2) // Check the sequnce if 3 numbers entered
+      printf("The number entered into the sequnce was %d\n", numGuess[numberOfNumbersEnetered]);
+      numberOfNumbersEnetered++;
+      if (numberOfNumbersEnetered >= 3) // Check the sequnce if 3 numbers entered
       {
         found = checkIfSequnceCorrect(numGuess, found);
+        numberOfNumbersEnetered = 0;
+        roundNumber++;
       }
-      numberOfNumbersEnetered++;      
+      
       buttonPressCount = 0;
     }
 

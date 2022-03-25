@@ -27,33 +27,38 @@ void printGPIO(uint32_t *gpio) {
 }
 
 void testDigital(uint32_t *gpio) {
-    printf("digitalWrite test!\n");
-    printf("Turning LED off and waiting 2 secs...\n");
-    digitalWrite(gpio, 13, 0);
-    sleep(2);
-    printf("LED on...\n");
-    digitalWrite(gpio, 5, 1);
-    sleep(1);
-    printf("LED off...\n");
-    digitalWrite(gpio, 5, 0);
+  printf("digitalWrite test!\n");
+  printf("both led's off...\n");
+  digitalWrite(gpio, 5,  0);
+  digitalWrite(gpio, 13, 0);
+  sleep(1);
 
-    printf("LED on...\n");
-    digitalWrite(gpio, 13, 1);
-    sleep(1);
-    printf("LED off...\n");
-    digitalWrite(gpio, 13, 0);
+  printf("red LED on...\n");
+  digitalWrite(gpio, 5, 1);
+  sleep(1);
+  
+  printf("green LED on...\n");
+  digitalWrite(gpio, 13, 1);
+  sleep(1);
+  
+  printf("red LED off...\n");
+  digitalWrite(gpio, 5, 0);
+  sleep(1);
+  
+  printf("green LED off...\n");
+  digitalWrite(gpio, 13, 0);
+  sleep(1);
 
-    sleep(1);
-    printf("red on...\n");
-    digitalWrite(gpio, 5, 1);
-    sleep(1);
-    printf("green on...\n");
-    digitalWrite(gpio, 13, 1);
-    sleep(1);
-    printf("both off...\n");
-    digitalWrite(gpio, 5, 0);
-    digitalWrite(gpio, 13, 0);
-    sleep(1);
+
+  printf("both led's on...\n");
+  digitalWrite(gpio, 5, 1);
+  digitalWrite(gpio, 13, 1);
+  sleep(1);
+  
+  printf("both led's off...\n");
+  digitalWrite(gpio, 5, 0);
+  digitalWrite(gpio, 13, 0);
+  sleep(1);
 
 }
 
@@ -192,7 +197,7 @@ void testHardware(uint32_t *gpio) {
 
         //pinModeTest(gpio);
         //readButtonTest(gpio);
-        ctestDigital(gpio);
+        testDigital(gpio);
 
         //testDigital(gpio);
         //testWaitButton(gpio);
