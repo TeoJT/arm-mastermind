@@ -731,10 +731,79 @@ int checkIfSequnceCorrect(int numGuess, int found)
   return found;
 }
 
-
 // Light sequence for acknowleding buttn input
-void endOfInputLights (int buttonPressCount){
-  printf("Put end of inpt light sequnce here\n");
+void endOfInputLights(int buttonPressCount)
+{
+  for (int i = 0; i < buttonPressCount; i++)
+  {
+    digitalWrite(gpio, LED, HIGH);
+    delay(1000);
+    digitalWrite(gpio, LED, LOW);
+    delay(1000);
+  }
+}
+
+void communicateGuessAccuracy(int *numGuess)
+{
+
+  // Blink green LED for exact matches
+  for (int i = 0; i < 2; i++)
+  {
+    digitalWrite(gpio, LED, HIGH);
+    delay(1000);
+    digitalWrite(gpio, LED, LOW);
+    delay(1000);
+  }
+
+  // Red LED seperator
+  delay(1000);
+
+  digitalWrite(gpio, LED2, HIGH);
+  delay(1000);
+  digitalWrite(gpio, LED2, LOW);
+
+  delay(1000);
+
+  // Blink green LED for aproxomite matches
+  for (int i = 0; i < 1; i++)
+  {
+    digitalWrite(gpio, LED, HIGH);
+    delay(1000);
+    digitalWrite(gpio, LED, LOW);
+    delay(1000);
+  }
+
+  /*for (int i = 0; i < 3; i++)
+  {
+    if (numGuess[i] == theSeq[i])
+    {
+      printf("Guess %d and %d are an extact match\n", numGuess[i], theSeq[i]);
+    }
+  }
+
+  for (int i = 0; i < 3; i++)
+  {
+    for (int j = 0; j < 3; i++)
+    {
+      if (numGuess[j] == theSeq[i])
+      {
+        printf("There is an aproxomite match\n");
+      }
+    }
+  }*/
+  /*for (int i = 0; i < 3; i++)
+{
+  if (numGuess[1] == theSeq[i])
+  {
+    printf("There is an aproxomite match\n");
+  }
+}
+  for (int i = 0; i < 3; i++)
+{
+  if (numGuess[2] == theSeq[i])
+  {
+    printf("There is an aproxomite match\n");
+  }   */
 }
 
 /* ======================================================= */
@@ -937,43 +1006,14 @@ int main(int argc, char *argv[])
 
   // Uncomment this when done.
 
-  // digitalWrite(gpio, LED, HIGH);
-  // digitalWrite(gpio, LED2, HIGH);
-  // delay(1000);
-  // digitalWrite(gpio, LED, LOW);
-  // digitalWrite(gpio, LED2, LOW);
-
-  /**(gpio + 7) = 0b00000000000000000010000000000000;
-
-  {
-    struct timespec sleeper, dummy;
-
-    // fprintf(stderr, "delaying by %d ms ...\n", howLong);
-    sleeper.tv_sec = (time_t)(howLong / 1000);
-    sleeper.tv_nsec = (long)(howLong % 1000) * 1000000;
-
-    nanosleep(&sleeper, &dummy);
-  }
-
-  *(gpio + 10) = 0b00000000000000000010000000000000;*/
-
-  // Green
-  /**(gpio + 7) = 0b00000000000000000000000000100000;
-
+  digitalWrite(gpio, LED, HIGH);
   delay(1000);
-
-  // Red
-  *(gpio + 7) = 0b00000000000000000010000000000000;
-
+  digitalWrite(gpio, LED2, HIGH);
   delay(1000);
-
-  // Green
-  *(gpio + 10) = 0b00000000000000000000000000100000;
-
+  digitalWrite(gpio, LED, LOW);
   delay(1000);
-
-  // Red
-  *(gpio + 10) = 0b00000000000000000010000000000000;*/
+  digitalWrite(gpio, LED2, LOW);
+  delay(1000);
 
   // -----------------------------------------------------------------------------
 
@@ -1123,8 +1163,6 @@ int main(int argc, char *argv[])
   // int numGuess = theSeq;
   // int numGuess[] = {1, 2, 3};
 
- 
-
   while (!found)
   {
 
@@ -1133,7 +1171,6 @@ int main(int argc, char *argv[])
       printf("That's the game done\n");
       break;
     }
-    
 
     timeInterval = clock() - timeToSubtract;
     if (buttonDown() && !isPressed)
@@ -1157,18 +1194,37 @@ int main(int argc, char *argv[])
     {
       wasPressed = 0;
       timeToSubtract = clock();
+
+      // Blink red LED once to acknoledge input of a number
+      // digitalWrite(gpio, LED2, HIGH);
+      // delay(1000);
+      // digitalWrite(gpio, LED2, LOW);
+
       printf("The time between was greater than 2 seconds moving on to the next number\n");
-      endOfInputLights(buttonPressCount);
+      // endOfInputLights(buttonPressCount);
       numGuess[numberOfNumbersEnetered] = buttonPressCount;
       printf("The number entered into the sequnce was %d\n", numGuess[numberOfNumbersEnetered]);
       numberOfNumbersEnetered++;
       if (numberOfNumbersEnetered >= 3) // Check the sequnce if 3 numbers entered
       {
+        // digitalWrite(gpio, LED2, HIGH);
+        // delay(1000);
+        // digitalWrite(gpio, LED2, LOW);
+        // delay(1000);
+        // digitalWrite(gpio, LED2, HIGH);
+        // delay(1000);
+        // digitalWrite(gpio, LED2, LOW);
         found = checkIfSequnceCorrect(numGuess, found);
+        communicateGuessAccuracy(numGuess);
+        if (!found)
+        {
+          printf("Begining new round\n");
+        }
+
         numberOfNumbersEnetered = 0;
         roundNumber++;
       }
-      
+
       buttonPressCount = 0;
     }
 
@@ -1254,7 +1310,7 @@ int main(int argc, char *argv[])
   if (found)
   {
 
-    /*digitalWrite(gpio, LED2, HIGH);
+    digitalWrite(gpio, LED2, HIGH);
 
     for (int i = 0; i < 3; i++)
     {
@@ -1264,7 +1320,7 @@ int main(int argc, char *argv[])
       delay(1000);
     }
 
-    digitalWrite(gpio, LED2, LOW);*/
+    digitalWrite(gpio, LED2, LOW);
   }
   else
   {
