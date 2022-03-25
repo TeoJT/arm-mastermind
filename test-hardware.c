@@ -44,15 +44,16 @@ void testDigital(uint32_t *gpio) {
     digitalWrite(gpio, 13, 0);
 
     sleep(1);
-    printf("LED on...\n");
-    digitalWrite(gpio, 13, 1);
+    printf("red on...\n");
     digitalWrite(gpio, 5, 1);
     sleep(1);
-    printf("LED off...\n");
-    digitalWrite(gpio, 13, 0);
-
+    printf("green on...\n");
+    digitalWrite(gpio, 13, 1);
     sleep(1);
+    printf("both off...\n");
     digitalWrite(gpio, 5, 0);
+    digitalWrite(gpio, 13, 0);
+    sleep(1);
 
 }
 
@@ -118,19 +119,83 @@ void argsTest() {
   printf("%d    %d,%d,%d\n", &asmArgs, &asmArgs.pin, &asmArgs.gpio, &asmArgs.value);
 }
 
+void cdigitalWrite(uint32_t *gpio, int pin, int value) {
+  if (value) {
+    *(gpio+7) = (1 << pin);
+  }
+  else {
+    *(gpio+10) = (1 << pin);
+  }
+}
+
+void ctestDigital(int* gpio) {
+  
+  printf("Digital test written in c!\n");
+  printf("both led's off...\n");
+  cdigitalWrite(gpio, 5,  0);
+  cdigitalWrite(gpio, 13, 0);
+  sleep(1);
+
+  printf("red LED on...\n");
+  cdigitalWrite(gpio, 5, 1);
+  sleep(1);
+  
+  printf("green LED on...\n");
+  cdigitalWrite(gpio, 13, 1);
+  sleep(1);
+  
+  printf("red LED off...\n");
+  cdigitalWrite(gpio, 5, 0);
+  sleep(1);
+  
+  printf("green LED off...\n");
+  cdigitalWrite(gpio, 13, 0);
+  sleep(1);
+
+
+  printf("both led's on...\n");
+  cdigitalWrite(gpio, 5, 1);
+  cdigitalWrite(gpio, 13, 1);
+  sleep(1);
+  
+  printf("both led's off...\n");
+  cdigitalWrite(gpio, 5, 0);
+  cdigitalWrite(gpio, 13, 0);
+  sleep(1);
+
+}
+
 
 void testHardware(uint32_t *gpio) {
     if (TEST_HARDWARE) {
         printf("\033[33m ===Teo's whacky testing code===\n");
+        printf("Press the button now to skip tests.\n");
+        printf("At least, I'm assuming the button works.\n");
+        int i = 0;
+        while (!readButton(gpio, 19) && i < 2000 ) {
+          usleep(1000);
+          i++;
+        }
+        if (readButton(gpio, 19)) {
+          printf("Skip tests.\033[0m\n");
+          return;
+        }
+        
+
+
+
+        //*(gpio+7) = 0b00000000000000000000000000000000;
+        //*(gpio+10) = 0b00000000000000000000000000000000;
 
         pinMode(gpio, 13, 1);
         pinMode(gpio, 5, 1);
 
         //pinModeTest(gpio);
         //readButtonTest(gpio);
+        ctestDigital(gpio);
 
-        testDigital(gpio);
-        testWaitButton(gpio);
+        //testDigital(gpio);
+        //testWaitButton(gpio);
         printf("End tests.\033[0m\n");
     }
 }

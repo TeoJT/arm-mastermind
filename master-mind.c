@@ -310,7 +310,7 @@ void showMatches(int /* or int* */ code, /* only for debugging */ int *seq1, int
   {
     if (seq1[i] == seq2[i])
     {
-      printf("There was a match (yes totally a match) between %d in sequnce 1 and %d in sequence 2", *(seq1 + i), *(seq2 + i));
+      printf("There was a match between %d in sequnce 1 and %d in sequence 2", *(seq1 + i), *(seq2 + i));
     }
   }
 }
@@ -712,6 +712,31 @@ void blinkN(uint32_t *gpio, int led, int c)
   /* ***  COMPLETE the code here  ***  */
 }
 
+/* Check if the sequene is correct and print relivant statement*/
+
+int checkIfSequnceCorrect(int numGuess, int found)
+{
+  if (countMatches(theSeq, numGuess) == 3)
+  {
+    printf("The sequnce was correct\n");
+
+    // End loop
+    found = 1;
+  }
+  else
+  {
+
+    printf("Sequnce incorrect\n");
+  }
+  return found;
+}
+
+
+// Light sequence for acknowleding buttn input
+void endOfInputLights (int buttonPressCount){
+  printf("Put end of inpt light sequnce here\n");
+}
+
 /* ======================================================= */
 /* SECTION: main fct                                       */
 /* ------------------------------------------------------- */
@@ -909,11 +934,14 @@ int main(int argc, char *argv[])
   unsigned int howLong = DELAY;
 
   // Test the LED's by turning them on and off at the begining
-  digitalWrite(gpio, LED, HIGH);
-  digitalWrite(gpio, LED2, HIGH);
-  delay(1000);
-  digitalWrite(gpio, LED, LOW);
-  digitalWrite(gpio, LED2, LOW);
+
+  // Uncomment this when done.
+
+  // digitalWrite(gpio, LED, HIGH);
+  // digitalWrite(gpio, LED2, HIGH);
+  // delay(1000);
+  // digitalWrite(gpio, LED, LOW);
+  // digitalWrite(gpio, LED2, LOW);
 
   /**(gpio + 7) = 0b00000000000000000010000000000000;
 
@@ -927,6 +955,24 @@ int main(int argc, char *argv[])
     nanosleep(&sleeper, &dummy);
   }
 
+  *(gpio + 10) = 0b00000000000000000010000000000000;*/
+
+  // Green
+  /**(gpio + 7) = 0b00000000000000000000000000100000;
+
+  delay(1000);
+
+  // Red
+  *(gpio + 7) = 0b00000000000000000010000000000000;
+
+  delay(1000);
+
+  // Green
+  *(gpio + 10) = 0b00000000000000000000000000100000;
+
+  delay(1000);
+
+  // Red
   *(gpio + 10) = 0b00000000000000000010000000000000;*/
 
   // -----------------------------------------------------------------------------
@@ -1065,31 +1111,32 @@ int main(int argc, char *argv[])
 
   // TODO make typedef boolean instead of int.
   int isPressed = 0;
-
-  int count = 0;
-
+  int buttonPressCount = 0;
   int countNumberForEachInput = 0;
-
   int numGuess[3];
-
   clock_t timer;
   int timeInterval = 0;
   int timeToSubtract = 0;
+  int numberOfNumbersEnetered = 0;
+  int wasPressed = 0;
+  // int numGuess = theSeq;
+  // int numGuess[] = {1, 2, 3};
+
+ 
 
   while (!found)
   {
 
+    timeInterval = clock() - timeToSubtract;
     if (buttonDown() && !isPressed)
     {
-      timeInterval = clock() - timeToSubtract;
-
-      count++;
-      printf("Press! %d\n", count);
-      countNumberForEachInput++;
-
-      usleep(1000);
-
       isPressed = 1;
+      wasPressed = 1;
+
+      buttonPressCount++;
+      printf("Press! %d\n", buttonPressCount);
+
+      usleep(2000);
     }
 
     if (!buttonDown() && isPressed)
@@ -1098,28 +1145,69 @@ int main(int argc, char *argv[])
       timeToSubtract = clock();
     }
 
-    if (timeInterval > 2000000) // Set's time interval to 2 seconds
+    if ((timeInterval > 2000000) && wasPressed) // Set's time interval to 2 seconds
     {
-      digitalWrite(gpio, LED, HIGH);
-      delay(1000);
-      digitalWrite(gpio, LED, LOW);
-
-      double time_taken = ((double)timeInterval) / CLOCKS_PER_SEC; // calculate the elapsed time
-      printf("The time interval was %f\n", time_taken);
-      timeInterval = 0;
-      numGuess[attempts] = countNumberForEachInput;
-      printf("Number guess: %d, This is attempt: %d\n", numGuess[attempts], attempts);
-      countNumberForEachInput = 0;
-      count = 0;
-      attempts++;
+      wasPressed = 0;
+      timeToSubtract = clock();
+      printf("The time between was greater than 2 seconds moving on to the next number\n");
+      endOfInputLights(buttonPressCount);
+      numGuess[numberOfNumbersEnetered] = buttonPressCount;
+      printf("The number entered into he sequnce was %d\n", numGuess[numberOfNumbersEnetered]);
+      if (numberOfNumbersEnetered >= 2) // Check the sequnce if 3 numbers entered
+      {
+        found = checkIfSequnceCorrect(numGuess, found);
+      }
+      numberOfNumbersEnetered++;      
+      buttonPressCount = 0;
     }
+
+    /*while (numberOfNumbersEnetered < 3)
+    {
+
+      if (buttonDown() && !isPressed)
+      {
+        timeInterval = clock() - timeToSubtract;
+
+        count++;
+        printf("Press! %d\n", count);
+        countNumberForEachInput++;
+
+        usleep(1000);
+
+        isPressed = 1;
+      }
+
+      if (!buttonDown() && isPressed)
+      {
+        isPressed = 0;
+        timeToSubtract = clock();
+      }
+
+      if (timeInterval > 2000000) // Set's time interval to 2 seconds
+      {
+        digitalWrite(gpio, LED, HIGH);
+        delay(1000);
+        digitalWrite(gpio, LED, LOW);
+
+        double time_taken = ((double)timeInterval) / CLOCKS_PER_SEC; // calculate the elapsed time
+        printf("The time interval was %f\n", time_taken);
+        timeInterval = 0;
+        numGuess[attempts] = countNumberForEachInput;
+        printf("Number guess: %d, This is attempt: %d\n", numGuess[attempts], attempts);
+        countNumberForEachInput = 0;
+        count = 0;
+        attempts++;
+        numberOfNumbersEnetered++;
+      }
+    }
+    numberOfNumbersEnetered = 0;
 
     if (countMatches(theSeq, numGuess))
     {
-      printf("The sequnce was correct");
+      printf("The sequnce was correct\n");
 
       // End loop
-      found = 0;
+      found = 1;
     }
     else
     {
@@ -1131,7 +1219,7 @@ int main(int argc, char *argv[])
         digitalWrite(gpio, LED2, LOW);
         delay(1000);
       }
-    }
+    }*/
 
     // double time_taken = ((double)timer)/CLOCKS_PER_SEC; // calculate the elapsed time
     // printf("The program took %f seconds to execute\n", time_taken);
@@ -1155,7 +1243,7 @@ int main(int argc, char *argv[])
   if (found)
   {
 
-    digitalWrite(gpio, LED2, HIGH);
+    /*digitalWrite(gpio, LED2, HIGH);
 
     for (int i = 0; i < 3; i++)
     {
@@ -1165,7 +1253,7 @@ int main(int argc, char *argv[])
       delay(1000);
     }
 
-    digitalWrite(gpio, LED2, LOW);
+    digitalWrite(gpio, LED2, LOW);*/
   }
   else
   {

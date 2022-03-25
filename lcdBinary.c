@@ -85,11 +85,11 @@ int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
         //Set the parameters
       "\t          mov r5, %[argsPointer] \n"   //Args memory location
         
-      "\t          ldr r0, [r5, #0] \n"    //store pin number into register
-      "\t          add r5, #4 \n"
+      "\t          ldr r0, [r5, #0] \n"     //store pin number into register
+      "\t          add r5, #4 \n" 
       "\t          ldr r1, [r5, #0] \n"     //store gpio pointer into register
-      "\t          add r5, #4 \n"
-      "\t          ldr r4, [r5, #0] \n"    //store value into register
+      "\t			     add r5, #4 \n"
+      "\t		     	 ldr r4, [r5, #0] \n"    //store value into register
         
         //Prepare the bit.
       "\t          mov r2, #1 \n"
@@ -101,16 +101,38 @@ int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
       "\t          cmp r4, #1 \n"
       "\t          beq pinOn \n"
       "\t          b pinOff \n"
+ 
 
       "pinOn:      add r1, #28 \n"
         //Get the existing register from memory.
         //Access gpio+7, or 4*7=28.
       "\t          ldr r3, [r1, #0] \n"
-        
-        //Perform bitwise operations to enable the pin.
-      "\t          orr r3, r2 \n"
-      "\t          str r3, [r1, #0] \n"  //Store the pin register back into memory.
-        
+                //Perform bitwise operations to enable the pin.
+	    "\t          orr r3, r2 \n"
+      "\t          str r3, [r1, #0] \n"//Store the pin register back into memory.
+				
+				
+				//Now set the bit on gpio+10 to low.
+        		//Get the existing register from memory (gpio+10).
+        		//Since 28 has already been added to r1, add 12 to
+				//get to 40 (since 4*10=40)
+			"\t	         add r1, #12 \n"
+      "\t          ldr r3, [r1, #0] \n"
+				
+			    //We need to inverse the register holding the temp bit
+				//so we can set it to 0 in the gpio register.
+				//Perform an xor operation on a word full of 1's.
+				//This should result in the active bit being set to 0
+				//while the rest of the bits are 1's.
+			"\t	         mov r0, #0xFFFFFFFF \n"
+      "\t          eor r2, r0 \n"
+      
+                //"bitwise and" so that we set the right bit while
+                //leaving the rest of the bits intact.
+      "\t          and r3, r2 \n"
+				
+      "\t          str r3, [r1, #0] \n"
+
       "\t          b end1 \n"
 
         //Get the existing register from memory.
@@ -119,11 +141,34 @@ int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
       "\t          ldr r3, [r1, #0] \n"
         
         //Perform bitwise operations to enable the pin.
-      "\t          orr r3, r2 \n"
+      "\t          orr r3, r2 \n" 
       //Store the pin register back into memory.
       "\t          str r3, [r1, #0] \n"
+				  
+				  //Now we need to set the bit in gpio+7
+				  //to low.
+				  //Get the existing register from memory (gpio+7).
+        		  //Since 40 has already been added to r1, sub 12 to
+				  //get to 28 (since 4*7=28)
+			"\t	         sub r1, #12 \n"
+      "\t          ldr r3, [r1, #0] \n"
+				  
+				  //We need to inverse the register holding the temp bit
+				  //so we can set it to 0 in the gpio register.
+				  //Perform an xor operation on a word full of 1's.
+				  //This should result in the active bit being set to 0
+				  //while the rest of the bits are 1's.
+		  "\t          mov r0, #0xFFFFFFFF \n"
+			"\t          eor r2, r0 \n"
+
+				  //"bitwise and" so that we set the right bit while
+				  //leaving the rest of the bits intact.
+			"\t          and r3, r2 \n"
+				  
+      "\t          str r3, [r1, #0] \n" 
+				  
         
-      "\t          b end1 \n"
+      "\t          b end1 \n" 
 
       "end1: \n"
 
