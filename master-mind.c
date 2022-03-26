@@ -209,24 +209,37 @@ extern int matches(int* secret, int* guess);
 
 /* initialise the secret sequence; by default it should be a random sequence */
 
+// Define array to store the randomly generated number sequence
 int numberSequence[3];
 
+// Generate random number sequnce
 void initSeq()
 {
+
+  // Use time as the seed for the random number
   srand(time(NULL));
+
+  // Define the int to store the random number generated
   int randomNumber;
 
+  // Loop to generate 3 random numbers
   for (int i = 0; i < 3; i++)
   {
+    // Generate a random number between 1 and 3 inclusive
     randomNumber = (rand() % 3 + 1);
+
+    // Set the posotion in the array to the generated number
     numberSequence[i] = randomNumber;
   }
+
+  // Set the generated sequnce to the global variable
   theSeq = numberSequence;
 }
 
 /* display the sequence on the terminal window, using the format from the sample run in the spec */
 void showSeq(int *seq)
 {
+  // Print out the number sequnce
   printf("Printing sequence\n");
   for (int i = 0; i < 3; i++)
   {
@@ -244,6 +257,7 @@ int /* or int* */ countMatches(int *seq1, int *seq2)
 {
   int numOfMatches = 0;
 
+  // Count the number of matches between the generated sequnce and the user enetered sequence
   for (int i = 0; i < 3; i++)
   {
     if (seq1[i] == seq2[i])
@@ -251,12 +265,16 @@ int /* or int* */ countMatches(int *seq1, int *seq2)
       numOfMatches++;
     }
   }
+
+  // Return the number of matches
   return numOfMatches;
 }
 
 /* show the results from calling countMatches on seq1 and seq2 */
 void showMatches(int /* or int* */ code, /* only for debugging */ int *seq1, int *seq2, /* optional, to control layout */ int lcd_format)
 {
+
+  // Loop through the matches printing them out
   for (int i = 0; i < 3; i++)
   {
     if (seq1[i] == seq2[i])
@@ -271,11 +289,14 @@ void showMatches(int /* or int* */ code, /* only for debugging */ int *seq1, int
 void readSeq(int *seq, int val)
 {
 
+  // Setup variables to split up the inputted number
   int temp = 0;
   int i = 0;
 
+  // Loop through the inputted number
   while (val > 0)
   {
+    // Split the number into it's individual digits
     temp = val % 10;
     val = val / 10;
     seq[i] = temp;
@@ -320,6 +341,7 @@ static uint64_t startT, stopT;
 /* use the libc fct gettimeofday() to implement it      */
 uint64_t timeInMicroseconds()
 {
+  // Get current time in microseconds
   struct timeval current_time;
   gettimeofday(&current_time, NULL);
   printf("seconds : %ld\nmicro seconds : %ld",
@@ -380,10 +402,12 @@ void delay(unsigned int howLong)
 
 
 
-/* Check if the sequene is correct and print relivant statement*/
+/* Check if the sequence is correct and print relivant statement*/
 
 int checkIfSequnceCorrect(int numGuess, int found)
 {
+
+  // Check if the number of matches is 3
   if (countMatches(theSeq, numGuess) == 3)
   {
     printf("The sequnce was correct\n");
@@ -399,7 +423,7 @@ int checkIfSequnceCorrect(int numGuess, int found)
   return found;
 }
 
-// Light sequence for acknowleding buttn input
+// Light sequence for acknowleding button input
 void endOfInputLights(int buttonPressCount)
 {
   for (int i = 0; i < buttonPressCount; i++)
@@ -599,109 +623,20 @@ int main(int argc, char *argv[])
 
   int theValue;
   unsigned int howLong = DELAY;
-  
-
-  // Test the LED's by turning them on and off at the begining
-
-  // digitalWrite(gpio, LED, HIGH);
-  // delay(1000);
-  // digitalWrite(gpio, LED2, HIGH);
-  // delay(1000);
-  // digitalWrite(gpio, LED, LOW);
-  // delay(1000);
-  // digitalWrite(gpio, LED2, LOW);
-  // delay(1000);
 
   // -----------------------------------------------------------------------------
 
-  /* ***  COMPLETE the code here  ***  */
-
-  // -------------------------------------------------------
-  // INLINED version of lcdInit (can only deal with one LCD attached to the RPi):
-  // you can use this code as-is, but you need to implement //digitalWrite() and
-  // pinMode() which are called from this code
-  // Create a new LCD:
-
-  
-
-  // lcds [lcdFd] = lcd ;
-
-
-  // Gordon Henderson's explanation of this part of the init code (from wiringPi):
-  // 4-bit mode?
-  //	OK. This is a PIG and it's not at all obvious from the documentation I had,
-  //	so I guess some others have worked through either with better documentation
-  //	or more trial and error... Anyway here goes:
-  //
-  //	It seems that the controller needs to see the FUNC command at least 3 times
-  //	consecutively - in 8-bit mode. If you're only using 8-bit mode, then it appears
-  //	that you can get away with one func-set, however I'd not rely on it...
-  //
-  //	So to set 4-bit mode, you need to send the commands one nibble at a time,
-  //	the same three times, but send the command to set it into 8-bit mode those
-  //	three times, then send a final 4th command to set it into 4-bit mode, and only
-  //	then can you flip the switch for the rest of the library to work in 4-bit
-  //	mode which sends the commands as 2 x 4-bit values.
-
-  // if (bits == 4)
-  // {
-  //   func = LCD_FUNC | LCD_FUNC_DL; // Set 8-bit mode 3 times
-  //   lcdPut4Command(lcd, func >> 4);
-  //   delay(35);
-  //   lcdPut4Command(lcd, func >> 4);
-  //   delay(35);
-  //   lcdPut4Command(lcd, func >> 4);
-  //   delay(35);
-  //   func = LCD_FUNC; // 4th set: 4-bit mode
-  //   lcdPut4Command(lcd, func >> 4);
-  //   delay(35);
-  //   lcd->bits = 4;
-  // }
-  // else
-  // {
-  //   failure(TRUE, "setup: only 4-bit connection supported\n");
-  //   func = LCD_FUNC | LCD_FUNC_DL;
-  //   lcdPutCommand(lcd, func);
-  //   delay(35);
-  //   lcdPutCommand(lcd, func);
-  //   delay(35);
-  //   lcdPutCommand(lcd, func);
-  //   delay(35);
-  // }
-
-  // if (lcd->rows > 1)
-  // {
-  //   func |= LCD_FUNC_N;
-  //   lcdPutCommand(lcd, func);
-  //   delay(35);
-  // }
-
-  // Rest of the initialisation sequence
-  // lcdDisplay(lcd, TRUE);
-  // lcdCursor(lcd, FALSE);
-  // lcdCursorBlink(lcd, FALSE);
-  // lcdClear(lcd);
-
-  // lcdPutCommand(lcd, LCD_ENTRY | LCD_ENTRY_ID);     // set entry mode to increment address counter after write
-  // lcdPutCommand(lcd, LCD_CDSHIFT | LCD_CDSHIFT_RL); // set display shift to right-to-left
-
-  // END lcdInit ------
-  // -----------------------------------------------------------------------------
   // Start of game
-  /* ***  COMPLETE the code here  ***  */
 
   /* initialise the secret sequence */
   if (!opt_s)
-    printf("It's this one\n");
   initSeq();
   if (debug)
-    printf("No it was this one\n");
   showSeq(theSeq);
 
 
   //testHardware(gpio);
 
-  
 
   // -----------------------------------------------------------------------------
   // +++++ main loop
@@ -716,46 +651,77 @@ int main(int argc, char *argv[])
   waitForButton(gpio, BUTTON);
 
 
-  // TODO make typedef boolean instead of int.
+  // Define variables needed in the game loop
+
+  // Status of the button variable
   int isPressed = 0;
+
+  // Count how many times the button has been pressed
   int buttonPressCount = 0;
-  int countNumberForEachInput = 0;
+
+  // Define the array to store the entered numbers in
   int numGuess[3];
+
+  // Get the clock to check button intevals
   clock_t timer;
+
+  // Store the calculation of each button interval
   int timeInterval = 0;
+
+  // Store the lnegth of time between each button press
   int timeToSubtract = 0;
+
+  // Store the number of numbers entered by the user
   int numberOfNumbersEnetered = 0;
+
+  // Store if the button was pressed or not
   int wasPressed = 0;
+
+  // Store the current round number of guesses and answers
   int roundNumber = 0;
 
+  // Main game loop
   while (!found)
   {
 
+    // Check if there has been 3 rounds and if so end the game
     if (roundNumber == 3)
     {
       printf("That's the game done\n");
       break;
     }
 
+    // Calculate how long since the last button press
     timeInterval = clock() - timeToSubtract;
+
+    // Check if the button has been pressed
     if (readButton(gpio, BUTTON) && !isPressed)
     {
+      // Set the button tracking varibles
       isPressed = 1;
       wasPressed = 1;
 
+      // Increase the number to be entered into the sequence
       buttonPressCount++;
+
+      // Set the time to base the future calcutions of
       timeToSubtract = clock();
 
+      // Sleep for a small amount time to make sure the button isn't registering more than 1 input
       usleep(2000);
     }
 
+    // Check if the button isn't being pressed anymore
     if (!readButton(gpio, BUTTON) && isPressed)
     {
+      // Set the button tracker variable to not pressed
       isPressed = 0;
     }
 
+    // If 2 seconds have passed since the last button press then continue on with the game
     if ((timeInterval > 1000000) && wasPressed) // Set's time interval to 2 seconds
     {
+      // Reset pressed variable to prepare for a new input
       wasPressed = 0;
 
       //Blink red LED once to acknoledge input of a number
@@ -765,12 +731,23 @@ int main(int argc, char *argv[])
 
       printf("The time between was greater than 2 seconds moving on to the next number\n");
       
+      // Play the end of input light sequnce
       endOfInputLights(buttonPressCount);
+
+      // Set the postion in the array to the inputted value
       numGuess[numberOfNumbersEnetered] = buttonPressCount;
+
+      // Print the value of the number enetered
       printf("The number entered into the sequence was %d\n", numGuess[numberOfNumbersEnetered]);
+      
+      // Increase the counter for the number of the numbers entered
       numberOfNumbersEnetered++;
+
+      // Check if the number of numbers entered is greater than 3 and if so move onto the next round
       if (numberOfNumbersEnetered >= 3) // Check the sequnce if 3 numbers entered
       {
+
+        // Check the matches for aproxomate and exact
         int* numGuessPointr = numGuess;
         printf("%d, %d, %d\n", *(theSeq), *(theSeq+1), *(theSeq+2));
         printf("%d, %d, %d\n", *(numGuessPointr), *(numGuessPointr+1), *(numGuessPointr+2));
@@ -778,6 +755,7 @@ int main(int argc, char *argv[])
         int approx = (answr & 0x03);
         int match = ((answr >> 2) & 0x03);
 
+        // Display end of round LED sequnce
         digitalWrite(gpio, LED2, HIGH);
         delay(BLINK_DELAY);
         digitalWrite(gpio, LED2, LOW);
@@ -786,10 +764,15 @@ int main(int argc, char *argv[])
         delay(BLINK_DELAY);
         digitalWrite(gpio, LED2, LOW);
 
+        // Set the found value
         found = (match == 3);
 
         delay(1000);
+
+        // Run LED sequnce for the number of exact and aproxomate matches
         communicateGuessAccuracy(match, approx);
+
+        // If the sequnce was not correct then proceed to the next round
         if (!found)
         {
           printf("Beginning new round\n");
@@ -798,32 +781,28 @@ int main(int argc, char *argv[])
           timeToSubtract = clock();
         }
 
+        // Reset variables to begin next round
         numberOfNumbersEnetered = 0;
         roundNumber++;
       }
       else {
+
+        // Ask user for button input
         printf("Please enter number: \n");
         waitForButton(gpio, BUTTON);
         timeToSubtract = clock();
       }
 
+      // Reset the button press count
       buttonPressCount = 0;
     }
 
-    /* ******************************************************* */
-    /* ***  COMPLETE the code here  ***                        */
-    /* this needs to implement the main loop of the game:      */
-    /* check for button presses and count them                 */
-    /* store the input numbers in the sequence @attSeq@        */
-    /* compute the match with the secret sequence, and         */
-    /* show the result                                         */
-    /* see CW spec for details                                 */
-    /* ******************************************************* */
   }
   if (found)
   {
     printf("Sequence found!");
 
+    // Display end of game LED sequence
     digitalWrite(gpio, LED2, HIGH);
 
     for (int i = 0; i < 3; i++)
