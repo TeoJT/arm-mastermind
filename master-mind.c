@@ -55,13 +55,9 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 
-//Include lcdBinary so we can use gpio with   a s s e m b l y  (wow)
+//Include lcdBinary so we can use gpio with assembly
 #include "lcdBinary.c"
-
-//To test the hardware, comment "#include "lcdBinary.c" and uncomment this line.
-//Also make sure to include the testHardware() in the main program
-//and enable the tests in test-hardware.c.
-//#include "test-hardware.c"
+#include "test-hardware.c"
 
 /* --------------------------------------------------------------------------- */
 /* Config settings */
@@ -75,10 +71,10 @@
 // PINs (based on BCM numbering)
 // For wiring see CW spec: https://www.macs.hw.ac.uk/~hwloidl/Courses/F28HS/F28HS_CW2_2022.pdf
 // GPIO pin for green LED
-#define LED 13
+#define GREEN_LED 13
 
 // GPIO pin for red LED
-#define LED2 5
+#define RED_LED 5
 
 // GPIO pin for button
 #define BUTTON 19
@@ -86,8 +82,10 @@
 // delay for loop iterations (mainly), in ms
 // in mili-seconds: 0.2s
 #define DELAY 200
-// in micro-seconds: 3s
-#define TIMEOUT 3000000
+// in micro-seconds: 1s
+#define TIMEOUT 1000000
+
+#define MAX_ROUNDS 5
 // =======================================================
 // APP constants   ---------------------------------
 // number of colours and length of the sequence
@@ -112,16 +110,6 @@
 #define HIGH 1
 
 #define BLINK_DELAY 200
-
-// =======================================================
-// Wiring (see inlined initialisation routine)
-
-#define STRB_PIN 24
-#define RS_PIN 25
-#define DATA0_PIN 23
-#define DATA1_PIN 10
-#define DATA2_PIN 27
-#define DATA3_PIN 22
 
 /* ======================================================= */
 /* SECTION: constants and prototypes                       */
@@ -368,9 +356,9 @@ void endOfInputLights(int buttonPressCount)
 {
   for (int i = 0; i < buttonPressCount; i++)
   {
-    digitalWrite(gpio, LED, HIGH);
+    digitalWrite(gpio, GREEN_LED, HIGH);
     delay(BLINK_DELAY);
-    digitalWrite(gpio, LED, LOW);
+    digitalWrite(gpio, GREEN_LED, LOW);
     delay(BLINK_DELAY);
   }
 }
@@ -381,27 +369,25 @@ void communicateGuessAccuracy(int match, int approx)
   // Blink green LED for exact matches
   for (int i = 0; i < match; i++)
   {
-    digitalWrite(gpio, LED, HIGH);
+    digitalWrite(gpio, GREEN_LED, HIGH);
     delay(BLINK_DELAY);
-    digitalWrite(gpio, LED, LOW);
+    digitalWrite(gpio, GREEN_LED, LOW);
     delay(BLINK_DELAY);
   }
 
   // Red LED seperator
-  delay(BLINK_DELAY);
 
-  digitalWrite(gpio, LED2, HIGH);
+  digitalWrite(gpio, RED_LED, HIGH);
   delay(BLINK_DELAY);
-  digitalWrite(gpio, LED2, LOW);
-
+  digitalWrite(gpio, RED_LED, LOW);
   delay(BLINK_DELAY);
 
   // Blink green LED for approxomite matches
   for (int i = 0; i < approx; i++)
   {
-    digitalWrite(gpio, LED, HIGH);
+    digitalWrite(gpio, GREEN_LED, HIGH);
     delay(BLINK_DELAY);
-    digitalWrite(gpio, LED, LOW);
+    digitalWrite(gpio, GREEN_LED, LOW);
     delay(BLINK_DELAY);
   }
 }
@@ -417,7 +403,7 @@ int main(int argc, char *argv[])
   int c, d, buttonPressed, rel, foo;
   int *attSeq;
 
-  int pinLED = LED, pin2LED2 = LED2, pinButton = BUTTON;
+  int pinLED = GREEN_LED, pin2LED2 = RED_LED, pinButton = BUTTON;
   int fSel, shift, pin, clrOff, setOff, off, res;
   int fd;
 
@@ -556,13 +542,17 @@ int main(int argc, char *argv[])
   // Configuration of LED and BUTTON
   // -----------------------------------------------------------------------------
   // setting LED 1 the mode
-  pinMode(gpio, LED, OUT);
+  pinMode(gpio, GREEN_LED, OUT);
 
   // setting LED 2 the mode
-  pinMode(gpio, LED2, OUT);
+  pinMode(gpio, RED_LED, OUT);
 
   // setting BUTTON the mode
   pinMode(gpio, BUTTON, IN);
+
+  //Turn off LEDs just in case they're already on.
+  digitalWrite(gpio, GREEN_LED, LOW);
+  digitalWrite(gpio, RED_LED, LOW);
 
   int theValue;
   unsigned int howLong = DELAY;
@@ -574,8 +564,31 @@ int main(int argc, char *argv[])
   /* initialise the secret sequence */
   if (!opt_s)
   initSeq();
-  if (debug)
-  showSeq(theSeq);
+  if (debug) {
+    showSeq(theSeq);
+
+    //Test the hardware using test functions in test-hardware.c
+    testHardware(gpio);
+    
+    //Quick test just to make sure the matching algorithm basically functions.
+    //Create dummy secret and guess
+    int testSeqAnswr[] = {1, 1, 2};
+    int testSeqGuess[] = {1, 2, 3};
+
+    //Print output to the terminal.
+    printf("Matches test...\n");
+    printf("Secret: \n");
+    printf("%d, %d, %d\n", testSeqAnswr[0], testSeqAnswr[1], testSeqAnswr[2]);
+    printf("Guess: \n");
+    printf("%d, %d, %d\n", testSeqGuess[0], testSeqGuess[1], testSeqGuess[2]);
+
+    //Run the matching function, feeding in the pointer of the dummy values as parameters.
+    int answr = matches(testSeqAnswr, testSeqGuess);
+    int approx = (answr & 0x03);
+    int match = ((answr >> 2) & 0x03);
+    printf("approx: %d, correct: %d\n", approx, match);
+  } 
+  
 
 
   //testHardware(gpio);
@@ -624,13 +637,12 @@ int main(int argc, char *argv[])
   while (!found)
   {
 
-    // Check if there has been 3 rounds and if so end the game
     //Uncomment to end the game after 3 rounds.
-    // if (roundNumber == 3)
-    // {
-    //   printf("That's the game done\n");
-    //   break;
-    // }
+    if (roundNumber == MAX_ROUNDS)
+    {
+      printf("Game over!\n");
+      return 0;
+    }
 
     // Calculate how long since the last button press
     timeInterval = clock() - timeToSubtract;
@@ -649,7 +661,7 @@ int main(int argc, char *argv[])
       timeToSubtract = clock();
 
       // Sleep for a small amount time to make sure the button isn't registering more than 1 input
-      usleep(2000);
+      usleep(100000);
     }
 
     // Check if the button isn't being pressed anymore
@@ -660,17 +672,21 @@ int main(int argc, char *argv[])
     }
 
     // If 2 seconds have passed since the last button press then continue on with the game
-    if ((timeInterval > 1000000) && wasPressed) // Set's time interval to 2 seconds
+    if ((timeInterval > TIMEOUT) && wasPressed) // Set's time interval to 2 seconds
     {
       // Reset pressed variable to prepare for a new input
       wasPressed = 0;
 
       //Blink red LED once to acknoledge input of a number
-      digitalWrite(gpio, LED2, HIGH);
+      digitalWrite(gpio, RED_LED, HIGH);
       delay(BLINK_DELAY);
-      digitalWrite(gpio, LED2, LOW);
+      digitalWrite(gpio, RED_LED, LOW);
 
       printf("The time between was greater than 1 second moving on to the next number\n");
+
+      if (buttonPressCount > 3) {
+        buttonPressCount = 3;
+      }
       
       // Play the end of input light sequnce
       endOfInputLights(buttonPressCount);
@@ -690,20 +706,20 @@ int main(int argc, char *argv[])
 
         // Check the matches for aproxomate and exact
         int* numGuessPointr = numGuess;
-        printf("%d, %d, %d\n", *(theSeq), *(theSeq+1), *(theSeq+2));
-        printf("%d, %d, %d\n", *(numGuessPointr), *(numGuessPointr+1), *(numGuessPointr+2));
+        //printf("%d, %d, %d\n", *(theSeq), *(theSeq+1), *(theSeq+2));
+        //printf("%d, %d, %d\n", *(numGuessPointr), *(numGuessPointr+1), *(numGuessPointr+2));
         int answr = matches(theSeq, numGuessPointr);
         int approx = (answr & 0x03);
         int match = ((answr >> 2) & 0x03);
 
         // Display end of round LED sequnce
-        digitalWrite(gpio, LED2, HIGH);
+        digitalWrite(gpio, RED_LED, HIGH);
         delay(BLINK_DELAY);
-        digitalWrite(gpio, LED2, LOW);
+        digitalWrite(gpio, RED_LED, LOW);
         delay(BLINK_DELAY);
-        digitalWrite(gpio, LED2, HIGH);
+        digitalWrite(gpio, RED_LED, HIGH);
         delay(BLINK_DELAY);
-        digitalWrite(gpio, LED2, LOW);
+        digitalWrite(gpio, RED_LED, LOW);
 
         // Set the found value
         found = (match == 3);
@@ -713,10 +729,18 @@ int main(int argc, char *argv[])
         // Run LED sequnce for the number of exact and aproxomate matches
         communicateGuessAccuracy(match, approx);
 
+        delay(1000);
+
         // If the sequnce was not correct then proceed to the next round
         if (!found)
         {
           printf("Beginning new round\n");
+          for (int i = 0; i < 3; i++) {
+            digitalWrite(gpio, RED_LED, HIGH);
+            delay(BLINK_DELAY);
+            digitalWrite(gpio, RED_LED, LOW);
+            delay(BLINK_DELAY);
+          }
           printf("Please enter number: \n");
           waitForButton(gpio, BUTTON);
           timeToSubtract = clock();
@@ -741,20 +765,20 @@ int main(int argc, char *argv[])
   }
   if (found)
   {
-    printf("Sequence found!");
+    printf("Sequence found! Congrats!\n");
 
     // Display end of game LED sequence
-    digitalWrite(gpio, LED2, HIGH);
+    digitalWrite(gpio, RED_LED, HIGH);
 
     for (int i = 0; i < 3; i++)
     {
-      digitalWrite(gpio, LED, HIGH);
+      digitalWrite(gpio, RED_LED, HIGH);
       delay(BLINK_DELAY);
-      digitalWrite(gpio, LED, LOW);
+      digitalWrite(gpio, RED_LED, LOW);
       delay(BLINK_DELAY);
     }
 
-    digitalWrite(gpio, LED2, LOW);
+    digitalWrite(gpio, RED_LED, LOW);
   }
   else
   {

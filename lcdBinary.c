@@ -8,6 +8,9 @@
 /* The Makefile assumes you define the functions here.                           */
 /* ***************************************************************************** */
 
+//For include guard.
+#define LCD_BINARY_FILE
+
 #ifndef	TRUE
 #  define	TRUE	(1==1)
 #  define	FALSE	(1==2)

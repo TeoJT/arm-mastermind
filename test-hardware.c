@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "lcdBinary.c"
+
+//Include guard so that we only include lcdBinary once.
+#ifndef LCD_BINARY_FILE
+  #include "lcdBinary.c"
+#endif
+
 
 //=====================================
 //This file was created to test the gpio
@@ -10,8 +15,9 @@
 //the actual game.
 //=====================================
 
-//set this to 1 to enable tests in the terminal.
-#define TEST_HARDWARE 0
+//set this to 1 to enable tests in the terminal
+//if the debug flag (-d) is used.
+#define TEST_HARDWARE 1
 
 void printGPIO(uint32_t *gpio) {
   for (int i = 0; i < 15; i++) {
@@ -202,13 +208,14 @@ void testHardware(uint32_t *gpio) {
 
         pinMode(gpio, 13, 1);
         pinMode(gpio, 5, 1);
+        pinMode(gpio, 19, 0);
 
-        //pinModeTest(gpio);
-        //readButtonTest(gpio);
+        pinModeTest(gpio);
         testDigital(gpio);
+        readButtonTest(gpio);
 
         //testDigital(gpio);
-        //testWaitButton(gpio);
+        testWaitButton(gpio);
         printf("End tests.\033[0m\n");
     }
 }
