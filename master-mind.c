@@ -3,11 +3,17 @@
  * CW spec: https://www.macs.hw.ac.uk/~hwloidl/Courses/F28HS/F28HS_CW2_2022.pdf
  * This repo: https://gitlab-student.macs.hw.ac.uk/f28hs-2021-22/f28hs-2021-22-staff/f28hs-2021-22-cwk2-sys
 
+ * This coursework is by group 13, (nicknamed "Bithub")
+ * Teo Taylor        (tjt2000) (H00346881)
+ * Calum Felstead    (cf2007)  (H00345337)
 
- * To compile the program (our way of doing it lol):
+ * To compile the program (our way of doing it):
   $ as mm-matches.s -o mm-matches.o
   $ gcc mm-matches.o master-mind.c -o cw2
   $ sudo ./cw2
+
+ * Due to the removal of the LCD from the coursework spec, any LCD code found was
+ * unneeded and removed.
 
 
  ***********************************************************************
