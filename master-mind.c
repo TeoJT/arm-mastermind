@@ -3,22 +3,15 @@
  * CW spec: https://www.macs.hw.ac.uk/~hwloidl/Courses/F28HS/F28HS_CW2_2022.pdf
  * This repo: https://gitlab-student.macs.hw.ac.uk/f28hs-2021-22/f28hs-2021-22-staff/f28hs-2021-22-cwk2-sys
 
- * Compile:
- gcc -c -o lcdBinary.o lcdBinary.c
- gcc -c -o master-mind.o master-mind.c
- gcc -o master-mind master-mind.o lcdBinary.o
- * Run:
- sudo ./master-mind
 
- OR use the Makefile to build
- > make all
- and run
- > make run
- and test
- > make test
+ * To compile the program (our way of doing it lol):
+  $ as mm-matches.s -o mm-matches.o
+  $ gcc mm-matches.o master-mind.c -o cw2
+  $ sudo ./cw2
+
 
  ***********************************************************************
- * The Low-level interface to LED, button, and LCD is based on:
+ * The Low-level interface to LED, button, and (no) LCD is based on:
  * wiringPi libraries by
  * Copyright (c) 2012-2013 Gordon Henderson.
  ***********************************************************************
@@ -61,8 +54,14 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
-//#include "lcdBinary.c"
-#include "test-hardware.c"
+
+//Include lcdBinary so we can use gpio with   a s s e m b l y  (wow)
+#include "lcdBinary.c"
+
+//To test the hardware, comment "#include "lcdBinary.c" and uncomment this line.
+//Also make sure to include the testHardware() in the main program
+//and enable the tests in test-hardware.c.
+//#include "test-hardware.c"
 
 /* --------------------------------------------------------------------------- */
 /* Config settings */
@@ -188,12 +187,6 @@ static int timed_out = 0;
 
 int failure(int fatal, const char *message, ...);
 
-/* ********************************************************** */
-/* COMPLETE the code for all of the functions in this SECTION */
-/* Either put them in a separate file, lcdBinary.c, and use   */
-/* inline Assembler there, or use a standalone Assembler file */
-/* You can also directly implement them here (inline Asm).    */
-/* ********************************************************** */
 
 extern int matches(int* secret, int* guess);
 
@@ -250,39 +243,6 @@ void showSeq(int *seq)
 #define NAN1 8
 #define NAN2 9
 
-/* counts how many entries in seq2 match entries in seq1 */
-/* returns exact and approximate matches, either both encoded in one value, */
-/* or as a pointer to a pair of values */
-int /* or int* */ countMatches(int *seq1, int *seq2)
-{
-  int numOfMatches = 0;
-
-  // Count the number of matches between the generated sequnce and the user enetered sequence
-  for (int i = 0; i < 3; i++)
-  {
-    if (seq1[i] == seq2[i])
-    {
-      numOfMatches++;
-    }
-  }
-
-  // Return the number of matches
-  return numOfMatches;
-}
-
-/* show the results from calling countMatches on seq1 and seq2 */
-void showMatches(int /* or int* */ code, /* only for debugging */ int *seq1, int *seq2, /* optional, to control layout */ int lcd_format)
-{
-
-  // Loop through the matches printing them out
-  for (int i = 0; i < 3; i++)
-  {
-    if (seq1[i] == seq2[i])
-    {
-      printf("There was a match between %d in sequnce 1 and %d in sequence 2", *(seq1 + i), *(seq2 + i));
-    }
-  }
-}
 
 /* parse an integer value as a list of digits, and put them into @seq@ */
 /* needed for processing command-line with options -s or -u            */
@@ -402,26 +362,6 @@ void delay(unsigned int howLong)
 
 
 
-/* Check if the sequence is correct and print relivant statement*/
-
-int checkIfSequnceCorrect(int numGuess, int found)
-{
-
-  // Check if the number of matches is 3
-  if (countMatches(theSeq, numGuess) == 3)
-  {
-    printf("The sequnce was correct\n");
-
-    // End loop
-    found = 1;
-  }
-  else
-  {
-
-    printf("Sequnce incorrect\n");
-  }
-  return found;
-}
 
 // Light sequence for acknowleding button input
 void endOfInputLights(int buttonPressCount)
@@ -472,7 +412,6 @@ void communicateGuessAccuracy(int match, int approx)
 
 int main(int argc, char *argv[])
 { // this is just a suggestion of some variable that you may want to use
-  printf("Entering Main Program\n");
 
   int found = 0, attempts = 0, i, j, code;
   int c, d, buttonPressed, rel, foo;
@@ -500,7 +439,6 @@ int main(int argc, char *argv[])
   // process command-line arguments
 
   // see: man 3 getopt for docu and an example of command line parsing
-  printf("Entering something\n");
   { // see the CW spec for the intended meaning of these options
     int opt;
     while ((opt = getopt(argc, argv, "hvdus:")) != -1)
@@ -528,7 +466,6 @@ int main(int argc, char *argv[])
       }
     }
   }
-  printf("Exiting something\n");
 
   if (help)
   {
@@ -580,8 +517,14 @@ int main(int argc, char *argv[])
     readSeq(seq2, opt_n); // turn the integer number into a sequence of numbers
     if (verbose)
       fprintf(stdout, "Testing matches function with sequences %d and %d\n", opt_m, opt_n);
-    res_matches = countMatches(seq1, seq2);
-    showMatches(res_matches, seq1, seq2, 1);
+    
+    //Feed the matches into the assembly matches() function
+    //and print out the appropriate output for the utest.
+    int out = matches(seq1, seq2);
+    int approx = (out & 0x03);
+    int match  = ((out >> 2) & 0x03);
+    printf("%d exact\n%d approximate", match, approx);
+
     exit(EXIT_SUCCESS);
   }
 
@@ -640,12 +583,9 @@ int main(int argc, char *argv[])
 
   // -----------------------------------------------------------------------------
   // +++++ main loop
+
+  //Uncomment to enable testing of the LED and button.
   // testHardware(gpio);
-  printf("matches test\n");
-  int ssss[] = {2,1,2};
-  int gggg[] = {2,1,3};
-  int answr = matches(&ssss, &gggg);
-  printf("approx:%d, correct:%d\n", (answr & 0x03), ((answr >> 2) & 0x03));
 
   printf("Welcome to mastermind! Enter a number on the button to begin...\n");
   waitForButton(gpio, BUTTON);
@@ -685,11 +625,12 @@ int main(int argc, char *argv[])
   {
 
     // Check if there has been 3 rounds and if so end the game
-    if (roundNumber == 3)
-    {
-      printf("That's the game done\n");
-      break;
-    }
+    //Uncomment to end the game after 3 rounds.
+    // if (roundNumber == 3)
+    // {
+    //   printf("That's the game done\n");
+    //   break;
+    // }
 
     // Calculate how long since the last button press
     timeInterval = clock() - timeToSubtract;
@@ -729,7 +670,7 @@ int main(int argc, char *argv[])
       delay(BLINK_DELAY);
       digitalWrite(gpio, LED2, LOW);
 
-      printf("The time between was greater than 2 seconds moving on to the next number\n");
+      printf("The time between was greater than 1 second moving on to the next number\n");
       
       // Play the end of input light sequnce
       endOfInputLights(buttonPressCount);

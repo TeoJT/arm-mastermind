@@ -59,19 +59,25 @@ int failure (int fatal, const char *message, ...);
 
 /* this version needs gpio as argument, because it is in a separate file */
 int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
-  /* ***  COMPLETE the code here, using inline Assembler  ***  */
 
+  //Prepare the arguments in a volatile struct
+  //so that we can access them from memory, only
+  //needing to pass the address of the arguments
+  //in a single register.
     volatile struct AsmArgs {
       uint32_t pin;
       uint32_t* gpio;
       uint32_t value;
     } asmArgs;
 
+    //Prepare the arguments.
     asmArgs.gpio = gpio;
     asmArgs.pin = pin;
     asmArgs.value = value;
 
     int outval = 0;
+    
+  //Inline assembly code sub-routine
     asm volatile (
         
         //Set the parameters
@@ -111,6 +117,10 @@ int static inline digitalWrite (uint32_t *gpio, int pin, int value) {
 // adapted from setPinMode
 int static inline pinMode(uint32_t *gpio, int pin, int mode /*, int fSel, int shift */) {
 
+  //Prepare the arguments in a volatile struct
+  //so that we can access them from memory, only
+  //needing to pass the address of the arguments
+  //in a single register.
   volatile struct AsmArgs {
     uint32_t wordIndex;
     uint32_t bitIndex;
@@ -118,12 +128,13 @@ int static inline pinMode(uint32_t *gpio, int pin, int mode /*, int fSel, int sh
     uint32_t mode;
   } asmArgs;
 
+  //Prepare the arguments.
   asmArgs.wordIndex = (pin/10)*4;
   asmArgs.bitIndex  = (pin%10)*3;
   asmArgs.gpio      = gpio;
   asmArgs.mode      = mode;
   
-
+  //Inline assembly code sub-routine
     int outval = 0;
     asm volatile (
       //r0-  the word index
@@ -199,15 +210,22 @@ void writeLED(uint32_t *gpio, int led, int value) {
 
 int static inline readButton(uint32_t *gpio, int button) {
 
+  //Prepare the arguments in a volatile struct
+  //so that we can access them from memory, only
+  //needing to pass the address of the arguments
+  //in a single register.
   volatile struct AsmArgs {
     uint32_t* gpio;
     uint32_t button;
   } asmArgs;
 
+  //Prepare the arguments.
   asmArgs.gpio   = gpio;
   asmArgs.button = button;
 
   int outval = 0;
+
+  //Inline assembly code sub-routine
   asm volatile (
     "\t          mov r0, %[argsPointer] \n"   //Args memory location
     
@@ -238,6 +256,8 @@ int static inline readButton(uint32_t *gpio, int button) {
   return outval;
 }
 
+//Run a while loop that simply does nothing (other than a sleep statement to prevent
+//100% cpu time doing nothing) until the button is pressed.
 void waitForButton(uint32_t *gpio, int button) {
   while (!readButton(gpio, button)) {
     usleep(1000);

@@ -37,7 +37,28 @@ exit:	@MOV	 R0, R4		@ load result to output register
 @ this is the matching fct that should be callable from C	
 matches:			@ Input: R0, R1 ... ptr to int arrays to match 
 					@ Output: R0 ... exact matches (10s) and approx matches (1s) of base COLORS
+
+	@ --------------------------------------------------------------------------------------------
+	@ The arm assembler sub-routine for checking matches and approxes is as follows:
+	@ --------------------------------------------------------------------------------------------
+	@ * Check secret digit 1 against guess digit 1, if it matches erase that secret digit and skip to the next secret digit.
+	@ * Check secret digit 1 against guess digit 2, if it matches erase that secret digit and skip to the next secret digit.
+	@ * Check secret digit 1 against guess digit 3, if it matches erase that secret digit and ect.
+	@ * Repeat the same, check secret digit 2 against guess digit 2, erase secret digit if it matches, skip to next secret etc.
+	@ * check secret digit 2 against guess digit 1 etc
+	@ * check secret digit 2 against guess digit 3 etc
+	@ * check secret digit 3 against guess digit 3 etc
+	@ * check secret digit 3 against guess digit 1 etc
+	@ * check secret digit 3 against guess digit 2 etc
+	@ * store the number of approxes and matches into a single register using bitwise operations, and return to the c code.
+	@ --------------------------------------------------------------------------------------------
+
+	@ We're going to need all these registers, push the existing data to a stack for now.
 	push {r2-r8}
+
+	@ Since we're going to be branching in the matches statement, save the
+	@ return address so we can return to our c code once this whole function
+	@ is done.
 	mov r10, lr
 	
 	@ r2, r3, and r4 will contain the numbers of the secret.
@@ -97,10 +118,13 @@ matches:			@ Input: R0, R1 ... ptr to int arrays to match
 	b di2
 
 di2:	
+	@ Prepare the address of the code that checks the next secret digit
+	@ so we can jump to it should we find an approx or match.
+	ldr r8, =di3
+
 	@ Same as before, we're just comparing the rest
 	@ of the secret digits to the guess digits.
 	@ Compare 2nd secret digit to 2nd guess digit
-	ldr r8, =di3
 	cmp r3, r6
 	mov r9, r6
 	mov r6, #0
@@ -124,8 +148,11 @@ di2:
 	b di3
 	
 di3:	
-	@ Compare 3rd secret digit to 3rd guess digit
+	@ Prepare the address of the code that checks the next secret digit
+	@ so we can jump to it should we find an approx or match.
 	ldr r8, =did
+
+	@ Compare 3rd secret digit to 3rd guess digit
 	cmp r4, r7
 	mov r9, r7
 	mov r7, #0
@@ -146,31 +173,32 @@ di3:
 	beq approxNum
 	mov r6, r9
 
+	@ At this point we should've compared all the numbers now.
 	b did
 	
 did:
     @ Now "combine" the matches and aprroxes into a single register.
 	lsl r1, #2
 	orr r0, r1
+
+	@ Store all of our old registers back from the stack now that we're
+	@ done with them.
 	pop {r2-r8}
+
+	@ Return to our c code. 
     bx r10
 	
 
-@ Amber expects
-@ r2- number to compare with
-@ r3- other num to compare with
-@ r4- address
-
 approxNum:
 	@ Increment the number of approx matches by 1
-	@ and go to the next digit.
+	@ and go to the next secret digit.
 	add r0, #1
 	bx r8
 	
 
 correctNum:
 	@ Increment the number of correct matches by 1
-	@ and go to the next digit.
+	@ and go to the next secret digit.
 	add r1, #1
 	bx r8
 

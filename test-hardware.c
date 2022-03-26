@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include "lcdBinary.c"
 
+//=====================================
+//This file was created to test the gpio
+//operations. All tests performed in the
+//terminal are printed in yellow. This
+//code should not be active when running
+//the actual game.
+//=====================================
+
 //set this to 1 to enable tests in the terminal.
 #define TEST_HARDWARE 0
 
